@@ -1,0 +1,76 @@
+{
+  "version": "v3-esa-cci",
+  "creation_date": "2026-02-28",
+  "description": "ESA CCI monthly soil moisture replaces static nigeria_soil_complete.csv",
+  "soil_source": "esa_cci_zone_summary_2000_2023.csv",
+  "soil_column": "Soil_Moisture_m3m3",
+  "co2_source": "nigeria_co2_2000_2023_with_units.csv",
+  "co2_column": "CO2_MtCO2",
+  "random_seed": 42,
+  "crops": [
+    "Cassava",
+    "Yams"
+  ],
+  "zones": [
+    "North West",
+    "North East",
+    "North Central",
+    "South West",
+    "South East",
+    "South South"
+  ],
+  "temporal_coverage": {
+    "start": 2000,
+    "end": 2023,
+    "years": 24
+  },
+  "splits": {
+    "train": "2000-2017",
+    "val": "2018-2020",
+    "test": "2021-2023"
+  },
+  "output_file": "tcn_mlp_soil_data.csv",
+  "dataset": {
+    "records": 3456,
+    "features": 37,
+    "columns": [
+      "Region",
+      "Crop",
+      "Year",
+      "Month",
+      "Temperature_C",
+      "Rainfall_mm",
+      "Humidity_percent",
+      "CO2_MtCO2",
+      "Soil_Moisture_Annual_Mean",
+      "Soil_Moisture_GrowSeason",
+      "Soil_Moisture_DrySeason",
+      "Yield_kg_per_ha",
+      "Soil_Moisture_m3m3",
+      "GDD",
+      "Cumulative_Rainfall",
+      "Days_Into_Season",
+      "SoilMoisture_Temp_Interaction",
+      "SoilMoisture_Rainfall_Interaction",
+      "Is_Rainy_Season",
+      "Is_Peak_Growing",
+      "Heat_Stress",
+      "Cold_Stress",
+      "Rainfall_Anomaly",
+      "Drought_Risk",
+      "Flood_Risk",
+      "Soil_Moisture_Anomaly",
+      "Yield_Lag_1",
+      "Yield_Lag_2",
+      "Yield_Lag_3",
+      "Yield_MA_3yr",
+      "Temp_MA_3yr",
+      "Rain_MA_3yr",
+      "Soil_MA_3yr",
+      "Yield_YoY_Change",
+      "Temp_YoY_Change",
+      "Rain_YoY_Change",
+      "Yield_Volatility_3yr"
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "model_name": "TCN-MLP Hybrid (L2=1e-3)",
+  "hyperparameters": {
+    "l2_regularization": 0.001,
+    "dropout": 0.25,
+    "n_augmentations": 40,
+    "learning_rate": 0.0008,
+    "weight_decay": 0.0002,
+    "batch_size": 16,
+    "epochs": 150,
+    "loss": "Huber(delta=0.2)"
+  },
+  "architecture": {
+    "tcn_filters": 28,
+    "tcn_kernel": 3,
+    "attention_heads": 4,
+    "dense_units": [
+      20,
+      14
+    ],
+    "total_parameters": 6931
+  },
+  "performance": {
+    "cv_train_r2_mean": 0.8337935705962684,
+    "cv_train_r2_std": 0.026409959444927904,
+    "cv_val_r2_mean": 0.7484113618765103,
+    "cv_val_r2_std": 0.05581765391265073,
+    "cv_test_r2_mean": 0.8112896485472086,
+    "cv_test_r2_std": 0.014206241060807492,
+    "cv_val_mae_mean": 161.9943991718373,
+    "final_test_r2": 0.8390633412277932,
+    "final_test_mae": 135.11887830668346
+  },
+  "data": {
+    "n_original_samples": 288,
+    "n_train_samples": 245,
+    "n_test_samples": 43,
+    "n_augmented_samples": 10045,
+    "sequence_length": 12,
+    "n_temporal_features": 3
+  }
+}

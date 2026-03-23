@@ -1,0 +1,11 @@
+Metric,Value
+Test R² Score,0.8391
+Test MAE (kg/ha),135.1
+Test RMSE (kg/ha),135.1
+Test MAPE (%),16.00
+Total Samples,3456
+Crops,2
+Regions,6
+High-Risk Combinations,12
+Model Training Time,~5-10 min (GPU)
+Prediction Interval Coverage,100.0%

@@ -1,0 +1,70 @@
+{
+  "creation_date": "2026-02-27",
+  "version": "v2",
+  "co2_source": "nigeria_co2_2000_2023_with_units.csv",
+  "co2_column": "CO2_MtCO2",
+  "random_seed": 42,
+  "crops": [
+    "Cassava",
+    "Yams"
+  ],
+  "zones": [
+    "North West",
+    "North East",
+    "North Central",
+    "South West",
+    "South East",
+    "South South"
+  ],
+  "temporal_coverage": {
+    "start": 2000,
+    "end": 2023,
+    "years": 24
+  },
+  "splits": {
+    "train": "2000-2017",
+    "val": "2018-2020",
+    "test": "2021-2023"
+  },
+  "output_file": "tcn_mlp_dataset.csv",
+  "dataset": {
+    "records": 3456,
+    "features": [
+      "Region",
+      "Crop",
+      "Year",
+      "Month",
+      "Temperature_C",
+      "Rainfall_mm",
+      "Humidity_percent",
+      "CO2_MtCO2",
+      "Avg_pH",
+      "Avg_Nitrogen_ppm",
+      "Avg_Phosphorus_ppm",
+      "Avg_Organic_Matter_Percent",
+      "Yield_kg_per_ha",
+      "GDD",
+      "Cumulative_Rainfall",
+      "Days_Into_Season",
+      "pH_Temperature_Interaction",
+      "Nitrogen_Rainfall_Interaction",
+      "Is_Rainy_Season",
+      "Is_Peak_Growing",
+      "Heat_Stress",
+      "Cold_Stress",
+      "Rainfall_Anomaly",
+      "Drought_Risk",
+      "Flood_Risk",
+      "Yield_Lag_1",
+      "Yield_Lag_2",
+      "Yield_Lag_3",
+      "Yield_MA_3yr",
+      "Temp_MA_3yr",
+      "Rain_MA_3yr",
+      "Yield_YoY_Change",
+      "Temp_YoY_Change",
+      "Rain_YoY_Change",
+      "Yield_Volatility_3yr"
+    ]
+  }
+}
