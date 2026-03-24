@@ -1,10 +1,10 @@
 
 📊 MODEL PERFORMANCE
 ─────────────────────────────────────────────────────────────────────────────
-• 5-Fold Cross-Validation Test R²: 0.8113 ± 0.0142
-• Final Model Test R²: 0.8391
-• Test MAE: 135.1 kg/ha (~16.0% of mean yield)
-• Model Generalization: Train-Test Gap = 2.25%
+• 5-Fold Cross-Validation Test R²: 0.8137 ± 0.0487
+• Final Model Test R²: 0.8421
+• Test MAE: 135.6 kg/ha (~16.1% of mean yield)
+• Model Generalization: Train-Test Gap = 1.10%
   ✓ Excellent generalization
 
 🌾 CROP PERFORMANCE
@@ -20,9 +20,7 @@
 
 🌡️ CLIMATE VULNERABILITY
 ─────────────────────────────────────────────────────────────────────────────
-• Cassava in North East: Vulnerability Score = 0.552 (HIGH RISK)
-• Yams in North East: Vulnerability Score = 0.520 (HIGH RISK)
-• Cassava in South South: Vulnerability Score = 0.497 (HIGH RISK)
+• Cassava in South South: Vulnerability Score = 0.435 (HIGH RISK)
 
 💧 SOIL-CLIMATE DRIVERS
 ─────────────────────────────────────────────────────────────────────────────
@@ -59,7 +57,7 @@
    → Integrate with early warning systems for food security alerts
 
 ═════════════════════════════════════════════════════════════════════════════
-Evaluation Date: 2026-03-23 22:47:23
+Evaluation Date: 2026-03-24 00:53:29
 Model: TCN-MLP v2 (L2=1e-3, Dropout=0.25, augmentation=40×)
 Dataset: 3456 observations, 2 crops, 6 regions
 ═════════════════════════════════════════════════════════════════════════════

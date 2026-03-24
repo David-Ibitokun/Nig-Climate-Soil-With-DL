@@ -1,8 +1,8 @@
 Metric,Value
-Test R² Score,0.8391
-Test MAE (kg/ha),135.1
-Test RMSE (kg/ha),135.1
-Test MAPE (%),16.00
+Test R² Score,0.8421
+Test MAE (kg/ha),135.6
+Test RMSE (kg/ha),135.6
+Test MAPE (%),16.05
 Total Samples,3456
 Crops,2
 Regions,6

@@ -1,16 +1,16 @@
 
 The optimized TCN-MLP hybrid model with regularization hyperparameters 
-(L2=1e-3, Dropout=0.25, augmentation ratio=40×) demonstrates robust 
-generalization on hold-out test data with R² = 0.8113 ± 0.0142, 
+(L2=1e-3, Dropout=0.25, augmentation ratio=40Ã—) demonstrates robust 
+generalization on hold-out test data with RÂ² = 0.8137 Â± 0.0487, 
 indicating strong predictive capability for crop yield estimation across 
 Nigerian regions and seasonal variations.
 
 Key Performance Metrics (5-Fold Cross-Validation):
-  • Training R²: 0.8338 ± 0.0264
-  • Validation R²: 0.7484 ± 0.0558
-  • Hold-out Test R²: 0.8113 ± 0.0142
-    (95% CI: [0.7988, 0.8237])
-  • Test MAE: 135.1 kg/ha (~8.0% of mean yield)
+  â€¢ Training RÂ²: 0.8247 Â± 0.0162
+  â€¢ Validation RÂ²: 0.7448 Â± 0.0550
+  â€¢ Hold-out Test RÂ²: 0.8137 Â± 0.0487
+    (95% CI: [0.7710, 0.8564])
+  â€¢ Test MAE: 135.6 kg/ha (~8.0% of mean yield)
 
 Model Configuration:
   Architecture: TCN (28 filters) + MultiHeadAttention (4 heads) + MLP [20, 14]
