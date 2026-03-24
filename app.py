@@ -79,11 +79,11 @@ data = load_data()
 summary_text = load_summary()
 
 # Sidebar navigation
-st.sidebar.title("🌍 Navigation")
+st.sidebar.title("Navigation")
 page = st.sidebar.radio(
     "Select Page",
     ["🏠 Dashboard", "📊 Model Performance", "🌾 Crop Analysis", 
-     "🗺️ Regional Vulnerability", "🔍 Feature Importance", "💡 Adaptive Strategies"]
+     "🗺️ Regional Vulnerability", "🔍 Feature Importance", "💡 Adaptive Strategies", "📚 Data Sources"]
 )
 
 # ==================== DASHBOARD PAGE ====================
@@ -598,6 +598,120 @@ elif page == "💡 Adaptive Strategies":
         st.metric("Early Warning Deployment", early_warning_count)
     with col3:
         st.metric("Total Crop-Region Units", len(strategies))
+
+
+# ==================== DATA SOURCES PAGE ====================
+elif page == "📚 Data Sources":
+    st.title("📚 Data Sources & Methodology")
+    
+    st.markdown("""
+    This project integrates data from multiple authoritative sources to analyze climate change impacts 
+    on food security in Nigeria. Below is a comprehensive overview of all data sources used.
+    """)
+    
+    # Load data sources
+    data_sources_df = pd.read_csv("project_data/data_sources.csv", encoding="utf-8")
+    
+    # Display by data type
+    st.subheader("🌍 Data Sources Overview")
+    
+    data_types = data_sources_df['Data_Type'].unique()
+    
+    for data_type in data_types:
+        with st.expander(f"**{data_type}** Sources", expanded=False):
+            type_data = data_sources_df[data_sources_df['Data_Type'] == data_type]
+            
+            for idx, row in type_data.iterrows():
+                st.markdown(f"""
+                ### {row['Source_Name']}
+                
+                **Source URL:** [{row['Source_URL']}]({row['Source_URL']})
+                
+                **Data Period:** {row['Data_Period']}
+                
+                **Temporal Resolution:** {row['Temporal_Resolution']}
+                
+                **Description:**
+                {row['Notes']}
+                
+                ---
+                """)
+    
+    # Summary table
+    st.subheader("📋 Data Sources Summary")
+    display_df = data_sources_df[['Data_Type', 'Source_Name', 'Data_Period', 'Temporal_Resolution']].copy()
+    st.dataframe(display_df, width='stretch', hide_index=True)
+    
+    # Data integration notes
+    st.subheader("🔗 Data Integration & Processing")
+    st.markdown("""
+    **Climate Data:**
+    - NASA POWER and NASA satellite data provide consistent global coverage
+    - Daily/monthly aggregation ensures compatibility across sources
+    - All data spatially averaged to Nigerian state administrative boundaries
+    
+    **Agricultural Data:**
+    - HarvestStat-Africa harmonizes multiple national and international sources
+    - Quality control flags ensure data reliability
+    - Includes area, production, and yield metrics at administrative level
+    
+    **Soil Data:**
+    - ESA CCI Soil Moisture provides long-term time series
+    - Combines active and passive microwave sensor observations
+    - Spatially consistent at 0.25° resolution
+    
+    **Temporal Coverage:**
+    - Climate data: 2000-2023 (comprehensive modern period)
+    - Crop data: 2000-2023 (aligned with climate records)
+    - Soil data: Historical back to 1978 (long-term trends)
+    
+    **Data Quality:**
+    - All sources use established quality assurance procedures
+    - Data gaps handled through interpolation and validation
+    - Results validated through model cross-validation (R² = 0.8421)
+    """)
+    
+    # Authentication & Access
+    st.subheader("🔐 Data Access & Authentication")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.info("""
+        **Free Access (No Account Required):**
+        - NASA POWER (https://power.larc.nasa.gov/)
+        - ESA CCI Soil Moisture (via CEDA Archive)
+        - Open-Meteo API
+        - HarvestStat-Africa (GitHub public repo)
+        """)
+    
+    with col2:
+        st.info("""
+        **Requires Free Registration:**
+        - NASA AIRS (NASA Earthdata)
+        - OCO-2 Data (NASA Earthdata)
+        
+        **Registration Link:**
+        https://urs.earthdata.nasa.gov/
+        """)
+    
+    # Citation information
+    st.subheader("📖 Citation & References")
+    st.markdown("""
+    When using this analysis or data, please cite:
+    
+    **Data Sources:**
+    - NASA POWER: https://power.larc.nasa.gov/
+    - NASA AIRS: https://disc.gsfc.nasa.gov/
+    - NASA OCO-2: https://disc.gsfc.nasa.gov/
+    - ESA CCI Soil Moisture: https://esa-soilmoisture-cci.org/
+    - HarvestStat-Africa: https://github.com/HarvestStat/HarvestStat-Africa
+    
+    **Climate Change & Food Security in Nigeria Analysis**
+    - Model: TCN-MLP Hybrid Architecture
+    - Research Focus: Climate-Crop Yield Relationships
+    - Data Period: 2000-2023
+    """)
 
 
 # Footer
