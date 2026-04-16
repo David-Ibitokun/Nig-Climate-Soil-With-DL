@@ -1,0 +1,18 @@
+Category,Parameter_Code,Parameter_Name,Unit
+temperature,T2M,Mean temperature at 2m,°C
+temperature,T2M_MAX,Max temperature at 2m,°C
+temperature,T2M_MIN,Min temperature at 2m,°C
+temperature,TS,Earth skin / land surface temperature,°C
+rainfall,PRECTOTCORR,Bias-corrected total precipitation,mm/day
+humidity,RH2M,Relative humidity at 2m,%
+humidity,QV2M,Specific humidity at 2m,g/kg
+humidity,T2MDEW,Dew point temperature at 2m,°C
+humidity,T2MWET,Wet bulb temperature at 2m,°C
+solar,ALLSKY_SFC_SW_DWN,All-sky surface shortwave downwelling,MJ/m²/day
+solar,CLRSKY_SFC_SW_DWN,Clear-sky surface shortwave downwelling,MJ/m²/day
+solar,ALLSKY_SFC_LW_DWN,All-sky surface longwave downwelling,W/m²
+solar,CLOUD_AMT,Cloud amount,%
+wind_pressure,WS2M,Wind speed at 2m,m/s
+wind_pressure,PS,Surface pressure,kPa
+soil_moisture,GWETTOP,Surface soil wetness — top layer,fraction (0–1)
+soil_moisture,GWETROOT,Root zone soil wetness,fraction (0–1)
