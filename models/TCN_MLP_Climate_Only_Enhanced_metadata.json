@@ -1,0 +1,78 @@
+{
+  "model_name": "TCN-MLP Enhanced Architecture",
+  "data_note": "Climate features only (no soil data)",
+  "version": "Enhanced (2x deeper, multi-scale attention)",
+  "hyperparameters": {
+    "l2_regularization": 0.0005,
+    "dropout": 0.35,
+    "n_augmentations": 40,
+    "learning_rate": 0.0008,
+    "weight_decay": 0.0002,
+    "batch_size": 16,
+    "epochs": 150,
+    "loss": "Huber(delta=0.2)"
+  },
+  "features": {
+    "description": "Climate-only features (14 types \u00d7 12 months)",
+    "feature_types": [
+      "Temperature_C",
+      "Rainfall_mm",
+      "Humidity_percent",
+      "GDD",
+      "Cumulative_Rainfall",
+      "Heat_Stress",
+      "Cold_Stress",
+      "Drought_Risk",
+      "Flood_Risk",
+      "Temp_Anomaly",
+      "Rainfall_Anomaly",
+      "Is_Rainy_Season",
+      "Is_Peak_Growth",
+      "Temp_Humidity_Interaction"
+    ],
+    "stress_calculation": "Recalculated with comfort_temp=25\u00b0C and global normalization"
+  },
+  "architecture": {
+    "description": "Enhanced: 2 Conv layers + 2 Attention layers + Residual connections",
+    "tcn_filters": 56,
+    "tcn_kernel_sizes": [
+      3,
+      5
+    ],
+    "attention_heads": 8,
+    "attention_layers": 2,
+    "residual_connections": 4,
+    "dense_units": [
+      32,
+      20,
+      14
+    ],
+    "total_parameters": 49539
+  },
+  "architecture_improvements": {
+    "filters_increased": "28 \u2192 56 (2x capacity)",
+    "conv_layers": "1 \u2192 2 (multi-kernel)",
+    "attention_heads": "4 \u2192 8 (multi-scale)",
+    "residual_connections": "Enhanced (4 vs 1)",
+    "dense_layers": "2 \u2192 3 (deeper fusion)"
+  },
+  "performance": {
+    "cv_train_r2_mean": 0.8747137469895334,
+    "cv_train_r2_std": 0.014351260263072301,
+    "cv_val_r2_mean": 0.7827779676934619,
+    "cv_val_r2_std": 0.09346960553227768,
+    "cv_test_r2_mean": 0.6922015559854028,
+    "cv_test_r2_std": 0.05116904179388286,
+    "cv_val_mae_mean": 147.88134210152475,
+    "final_test_r2": 0.7032150436603551,
+    "final_test_mae": 175.7947381197161
+  },
+  "data": {
+    "n_original_samples": 288,
+    "n_train_samples": 231,
+    "n_test_samples": 57,
+    "n_augmented_samples": 9471,
+    "sequence_length": 12,
+    "n_temporal_features": 14
+  }
+}

@@ -1,0 +1,38 @@
+Geopolitical_Zone,State,Latitude,Longitude,Elevation_m,Soil_Type,Soil_Texture,Soil_pH,Organic_Matter_Percent,Nitrogen_ppm,Phosphorus_ppm,Potassium_ppm,Cation_Exchange_Capacity,Bulk_Density,Water_Holding_Capacity_Percent
+North-Central,Benue,7.73,8.54,87.0,Ferruginous,Loam,6.0,0.11,116.3,1.2,59.3,0.7,0.01,30
+North-Central,FCT,9.07,7.48,492.0,Ferruginous,Loam,5.8,0.15,83.3,1.5,72.7,1.0,0.01,30
+North-Central,Kogi,7.8,6.74,63.0,Ferruginous,Sandy Clay Loam,6.0,0.15,94.2,1.5,65.7,0.9,0.01,25
+North-Central,Kwara,8.48,4.54,301.0,Ferruginous,Loam,6.1,0.13,83.3,1.5,72.7,0.7,0.01,30
+North-Central,Nasarawa,8.49,7.71,202.0,Ferruginous,Loam,5.7,0.15,61.8,1.5,59.3,0.7,0.01,30
+North-Central,Niger,9.61,6.55,246.0,Ferruginous,Loam,6.2,0.13,72.5,1.5,65.7,0.8,0.01,30
+North-Central,Plateau,9.89,8.86,1247.0,Ferruginous,Sandy Clay Loam,5.7,0.15,72.5,0.8,98.5,1.2,0.01,25
+North-East,Adamawa,9.21,12.48,173.0,Ferruginous,Sandy Clay Loam,6.6,0.13,83.3,1.7,80.5,1.2,0.01,25
+North-East,Bauchi,10.31,9.84,0.0,Ferruginous,Sandy Clay Loam,6.8,0.13,72.5,1.7,72.7,1.1,0.01,25
+North-East,Borno,11.83,13.15,323.0,Ferruginous,Sandy Clay Loam,6.4,0.13,61.8,1.1,98.5,1.2,0.01,25
+North-East,Gombe,10.28,11.17,458.0,Ferruginous,Sandy Clay Loam,6.5,0.13,72.5,2.1,72.7,0.9,0.01,25
+North-East,Taraba,8.89,11.36,204.0,Ferruginous,Sandy Clay Loam,6.2,0.11,83.3,1.7,72.7,0.8,0.01,25
+North-East,Yobe,11.75,11.96,367.0,Ferruginous,Sandy Clay Loam,6.7,0.13,83.3,1.1,98.5,1.1,0.01,25
+North-West,Jigawa,11.75,9.34,444.0,Ferruginous,Loam,6.6,0.13,61.8,1.5,65.7,0.6,0.01,30
+North-West,Kaduna,10.51,7.44,599.0,Ferruginous,Loam,6.3,0.13,51.3,1.5,65.7,0.6,0.01,30
+North-West,Kano,12.0,8.52,477.0,Ferruginous,Sandy Clay Loam,7.0,0.13,83.3,1.1,72.7,1.2,0.01,25
+North-West,Katsina,12.99,7.6,520.0,Ferruginous,Sandy Clay Loam,6.6,0.13,72.5,0.9,72.7,0.8,0.01,25
+North-West,Kebbi,12.45,4.19,236.0,Ferruginous,Loam,6.4,0.1,61.8,1.1,48.4,0.6,0.01,30
+North-West,Sokoto,13.06,5.23,286.0,Ferruginous,Sandy Clay Loam,6.4,0.11,83.3,1.2,72.7,1.1,0.01,25
+North-West,Zamfara,12.16,6.66,441.0,Ferruginous,Sandy Clay Loam,6.6,0.18,83.3,1.2,89.0,1.0,0.01,25
+South-East,Abia,5.52,7.49,160.0,Ferruginous,Sandy Clay Loam,5.6,0.3,138.8,1.7,72.7,1.1,0.01,25
+South-East,Anambra,6.21,7.07,95.0,Ferruginous,Sandy Clay Loam,6.2,0.21,150.3,1.5,89.0,1.1,0.01,25
+South-East,Ebonyi,6.32,8.11,48.0,Ferruginous,Sandy Clay Loam,5.7,0.21,105.2,1.7,72.7,1.1,0.01,25
+South-East,Enugu,6.44,7.5,181.0,Ferruginous,Sandy Clay Loam,5.7,0.21,116.3,1.5,72.7,1.1,0.01,25
+South-East,Imo,5.48,7.03,69.0,Ferruginous,Sandy Clay Loam,5.8,0.25,150.3,1.7,65.7,1.1,0.01,25
+South-South,Akwa Ibom,5.03,7.92,67.0,Ferruginous,Sandy Clay Loam,6.1,0.25,150.3,5.8,98.5,1.1,0.01,25
+South-South,Bayelsa,4.93,6.26,15.0,Acidic,Sandy Clay Loam,5.3,0.43,173.5,1.7,72.7,1.1,0.01,25
+South-South,Cross River,4.95,8.33,32.0,Ferruginous,Sandy Clay Loam,6.0,0.25,185.3,3.0,65.7,0.9,0.01,25
+South-South,Delta,6.2,6.73,44.0,Ferruginous,Sandy Clay Loam,6.2,0.18,127.5,1.7,89.0,1.2,0.01,25
+South-South,Edo,6.34,5.62,86.0,Ferruginous,Sandy Clay Loam,6.1,0.21,173.5,2.5,80.5,1.2,0.01,25
+South-South,Rivers,4.81,7.01,17.0,Ferruginous,Sandy Clay Loam,6.1,0.3,185.3,3.0,89.0,1.2,0.01,25
+South-West,Ekiti,7.62,5.22,423.0,Ferruginous,Sandy Clay Loam,6.1,0.21,127.5,2.1,72.7,0.6,0.01,25
+South-West,Lagos,6.52,3.37,20.0,Ferruginous,Sandy Clay Loam,5.9,0.21,161.8,1.7,89.0,1.0,0.01,25
+South-West,Ogun,7.15,3.35,73.0,Ferruginous,Loam,6.0,0.15,105.2,1.5,98.5,0.6,0.01,30
+South-West,Ondo,7.25,5.21,348.0,Ferruginous,Sandy Clay Loam,5.8,0.25,138.8,1.5,80.5,0.8,0.01,25
+South-West,Osun,7.77,4.56,322.0,Ferruginous,Loam,6.2,0.15,116.3,1.7,89.0,0.8,0.01,30
+South-West,Oyo,7.38,3.93,225.0,Ferruginous,Loam,6.1,0.21,116.3,1.7,163.0,0.7,0.01,30
