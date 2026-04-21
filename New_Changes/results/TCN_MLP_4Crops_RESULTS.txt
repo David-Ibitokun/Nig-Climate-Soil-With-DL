@@ -1,23 +1,23 @@
 
 The optimized TCN-MLP hybrid model for 4-crop prediction with regularization 
 hyperparameters (L2=1e-3, Dropout=0.25, augmentation ratio=40×) demonstrates 
-robust generalization on hold-out test data with R² = 0.8778 ± 0.0252, 
+robust generalization on hold-out test data with R² = 0.8785 ± 0.0667, 
 indicating strong predictive capability for crop yield estimation across 
 Nigerian regions (Maize, Rice, Cassava, Yam) and seasonal variations.
 
 Key Performance Metrics (5-Fold Cross-Validation):
-  • Training R²: 0.8099 ± 0.0387
-  • Validation R²: 0.8091 ± 0.1203
-  • Hold-out Test R²: 0.8778 ± 0.0252
-    (95% CI: [0.8557, 0.8999])
-  • Test MAE: 0.9 kg/ha (~15.3% of mean yield)
+  • Training R²: 0.8303 ± 0.0332
+  • Validation R²: 0.8205 ± 0.1187
+  • Hold-out Test R²: 0.8785 ± 0.0667
+    (95% CI: [0.8200, 0.9369])
+  • Test MAE: 657.8 kg/ha (~11.6% of mean yield)
 
 Model Configuration:
   Architecture: TCN (28 filters) + MultiHeadAttention (4 heads) + MLP [20, 14]
-  Total Parameters: 5,803
+  Total Parameters: 5,719
   Augmented Training Samples: 20,910
   Test Set Size: 90 samples (completely independent)
-  Feature Set: ['ALLSKY_SFC_SW_DWN', 'GDD', 'GWETTOP', 'T2MDEW'] (4 core climate features)
+  Feature Set: ['GDD', 'PRECTOTCORR', 'RH2M'] (3 core climate features)
 
 Conclusion:
 The model successfully integrates temporal convolutional networks for 
