@@ -18,18 +18,18 @@
       20,
       14
     ],
-    "total_parameters": 5719
+    "total_parameters": 6067
   },
   "performance": {
-    "cv_train_r2_mean": 0.8302550254114809,
-    "cv_train_r2_std": 0.03320004462014498,
-    "cv_val_r2_mean": 0.8205313370846484,
-    "cv_val_r2_std": 0.11871904178023379,
-    "cv_test_r2_mean": 0.8784585180898249,
-    "cv_test_r2_std": 0.06672354086063301,
-    "cv_val_mae_mean": 885.8596946502566,
-    "final_test_r2": 0.9282082098001943,
-    "final_test_mae": 657.801625204943
+    "cv_train_r2_mean": 0.827670218303426,
+    "cv_train_r2_std": 0.03539783160812408,
+    "cv_val_r2_mean": 0.8292822016060655,
+    "cv_val_r2_std": 0.1129702290076073,
+    "cv_test_r2_mean": 0.9222506953644203,
+    "cv_test_r2_std": 0.02175489013332123,
+    "cv_val_mae_mean": 873.1600655265627,
+    "final_test_r2": 0.8910992567909581,
+    "final_test_mae": 746.7539260359549
   },
   "data": {
     "n_total_samples": 600,

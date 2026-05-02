@@ -1,0 +1,28 @@
+{
+    "n_features": 3,
+    "n_year_features": 3,
+    "train_size": 510,
+    "test_size": 90,
+    "final_test_mae": 1383.7375558719848,
+    "final_test_r2": 0.5281655079675511,
+    "baseline_mae": 4271.464310653174,
+    "unique_features": [
+        "GDD",
+        "PRECTOTCORR",
+        "GWETROOT"
+    ],
+    "crop_mapping": [
+        "Cassava",
+        "Maize",
+        "Rice",
+        "Yam"
+    ],
+    "region_mapping": [
+        "North-Central",
+        "North-East",
+        "North-West",
+        "South-East",
+        "South-South",
+        "South-West"
+    ]
+}
