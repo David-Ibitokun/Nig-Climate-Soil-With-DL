@@ -49,7 +49,7 @@ def render(data):
         try:
             img_path = resolve_results_png("SHAP_Feature_Importance.png")
             if img_path.exists():
-                 st.image(str(img_path), caption="SHAP Feature Importance Analysis", use_container_width=True)
+                st.image(str(img_path), caption="SHAP Feature Importance Analysis", use_container_width=True)
                 st.markdown(
                     """
                     *SHAP values explain which climate and temporal features have the highest impact on yield predictions.*
