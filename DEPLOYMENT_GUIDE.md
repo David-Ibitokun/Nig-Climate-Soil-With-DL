@@ -51,31 +51,6 @@ pip install -r requirements-streamlit.txt
 # or: streamlit run app.py
 ```
 
-## Docker (optional)
-
-Simple Dockerfile example:
-
-```dockerfile
-FROM python:3.11-slim
-WORKDIR /app
-COPY . /app
-RUN pip install --no-cache-dir -r requirements-streamlit.txt
-ENV STREAMLIT_SERVER_PORT=8501
-EXPOSE 8501
-CMD ["streamlit","run","app.py","--server.port=8501","--server.address=0.0.0.0"]
-```
-
-Build and run:
-
-```bash
-docker build -t tcn-mlp-app:latest .
-docker run -p 8501:8501 --memory=4g tcn-mlp-app:latest
-```
-
-Notes:
-- Mount `project_data/` and `New_Changes/results/` as volumes if you want persistent datasets and outputs.
-- Give the container enough memory to load the trained model(s).
-
 ## Streamlit Cloud (quick)
 
 1. Push repository to GitHub.
