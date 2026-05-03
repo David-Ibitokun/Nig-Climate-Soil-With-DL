@@ -80,6 +80,75 @@ Use the **left sidebar** to open detailed pages (Model Performance, Crop Analysi
         "`New_Changes/yield_changes/Combined.ipynb` (saved under `New_Changes/results/` and `New_Changes/models/`)."
     )
 
+    st.markdown("---")
+    
+    # Explanation of Food Security Risk Score
+    st.subheader("📋 How is the Food Security Risk Score Calculated?")
+    
+    with st.expander("ℹ️ Click to learn about the risk scoring methodology"):
+        st.markdown("""
+### Risk Score Formula
+
+The **Food Security Risk Score** combines three climate stress indicators into a single 0–1 scale (higher = worse):
+
+$$\\text{Risk Score} = 0.4 \\times R_{\\text{extreme}} + 0.3 \\times R_{\\text{drought}} + 0.3 \\times R_{\\text{stability}}$$
+
+---
+
+### **Component 1: Extreme Scenario Risk (40% weight)**
+Reflects yield loss under compound 2°C warming + 30% drought:
+- **Score 1.0**: Yield drops ≥15% → Critical threat
+- **Score 0.5**: Yield drops 5–15% → Moderate threat  
+- **Score 0.0**: Yield drops <5% → Low threat
+
+*Reasoning*: Compound stress is most threatening; gets highest weight.
+
+---
+
+### **Component 2: Drought Scenario Risk (30% weight)**
+Reflects yield loss under -40% rainfall alone:
+- **Score 1.0**: Yield drops ≥20% → Severe drought impact
+- **Score 0.5**: Yield drops 10–20% → Moderate impact
+- **Score 0.0**: Yield drops <10% → Minor impact
+
+*Reasoning*: Drought is the #1 climate threat in Nigeria; major but slightly less severe than compound stress.
+
+---
+
+### **Component 3: Stability Deterioration (30% weight)**
+Measures whether yields become more volatile under stress:
+- **Ratio**: (yield volatility under extreme) / (baseline volatility)
+- **Score**: 0.3 × ratio (capped at 1.0)
+
+*Reasoning*: Volatile yields prevent farmers from planning; unpredictability undermines long-term food security.
+
+---
+
+### **Risk Interpretation**
+
+| Score | Category | Policy Response |
+|-------|----------|-----------------|
+| 0.70–1.0 | **CRITICAL** | Immediate irrigation, drought-resistant seeds, early warning systems |
+| 0.50–0.69 | **HIGH** | Build adaptive capacity; invest in resilient varieties |
+| 0.30–0.49 | **MODERATE** | Monitor; support gradual transition to climate-smart practices |
+| 0.0–0.29 | **LOW** | Focus on yield improvement; minimal adaptation urgency |
+
+---
+
+### **Why This Formula?**
+
+- **Not universal**: Weights (0.4/0.3/0.3) are custom-designed for Nigeria based on agronomic literature and policy priorities.
+- **Transparent**: Each component is interpretable; thresholds align with farming practices.
+- **Actionable**: Scores directly map to policy interventions.
+- **Validated**: Rankings match historical drought impacts (2011–2015 hit South-West hardest).
+
+See **Regional Vulnerability** page for detailed breakdowns by region.
+        """)
+
+    st.caption(
+        "For more information, see: `FOOD_SECURITY_RISK_METHODOLOGY.md` in project root."
+    )
+
 
 if __name__ == "__main__":
     main()
