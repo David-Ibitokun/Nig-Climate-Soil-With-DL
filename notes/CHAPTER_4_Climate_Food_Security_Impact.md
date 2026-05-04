@@ -2,14 +2,14 @@
 
 ## 4.1 Overview
 
-This chapter presents the impact evaluation stage of the study, where the trained TCN-MLP model is used to estimate how projected climate stress conditions may influence crop yield and food security outcomes across Nigeria. The analysis focuses on four major crops (cassava, maize, rice, and yam) across six geopolitical regions over the 1999 to 2023 period.
+This chapter presents the impact evaluation stage of the study. The trained TCN-MLP model is used to estimate how changes in climate conditions may influence crop yield and food security outcomes across Nigeria. The analysis focuses on four major crops, namely cassava, maize, rice, and yam, across the six geopolitical zones over the 1999 to 2023 period.
 
-The objective of this chapter is threefold:
-1. quantify yield responses under multiple climate stress scenarios,
-2. translate yield responses into a regional food security risk metric, and
-3. derive practical adaptation priorities for policy and extension planning.
+The chapter has three objectives:
+1. quantify yield responses under selected climate stress scenarios,
+2. summarize regional food security vulnerability, and
+3. derive practical adaptation priorities that can support agricultural planning.
 
-The chapter is organized into scenario design, implementation workflow, results interpretation, risk evaluation, adaptation strategies, limitations, and policy conclusions.
+The discussion is organized into scenario design, model-based impact results, regional risk interpretation, crop sensitivity, adaptation priorities, limitations, and conclusion.
 
 ---
 
@@ -17,24 +17,24 @@ The chapter is organized into scenario design, implementation workflow, results 
 
 ### 4.2.1 Scenario Specification
 
-Climate stress is represented using controlled perturbations on input climate features (GDD, rainfall, and humidity). Table 4.1 summarizes the scenario assumptions.
+Climate stress is represented using controlled perturbations on the input climate features used by the notebook, mainly temperature, rainfall, and soil moisture. Table 4.1 summarizes the scenario assumptions.
 
-| Scenario | GDD Change | Rainfall Change | Humidity Change | Interpretation |
-|----------|------------|-----------------|-----------------|----------------|
-| Baseline | 0.0 | 0% | 0% | Reference climate condition |
-| Warming +1C | +2.5 | 0% | -2% | Mild warming signal |
-| Warming +2C | +5.0 | 0% | -4% | Moderate warming signal |
-| Drought -20% | +1.0 | -20% | -5% | Moderate moisture stress |
-| Drought -40% | +2.0 | -40% | -10% | Severe moisture stress |
-| Flooding +40% | -1.0 | +40% | +10% | Excess rainfall event |
-| Extreme (2C + Drought) | +5.0 | -30% | -8% | Compound heat-drought stress |
+| Scenario | Temperature Change | Rainfall Change | Soil Moisture Change | Interpretation |
+|----------|-------------------|-----------------|----------------------|----------------|
+| Baseline | 0.0 | 0% | 0% | Reference condition |
+| Warming +1C | +1.0 | 0% | -5% | Mild warming signal |
+| Warming +2C | +2.0 | 0% | -10% | Moderate warming signal |
+| Drought -20% | +0.5 | -20% | -15% | Moderate moisture stress |
+| Drought -40% | +1.0 | -40% | -30% | Severe moisture stress |
+| Flooding +30% | 0.0 | +30% | +25% | Excess rainfall event |
+| Extreme (2C + Drought) | +2.0 | -30% | -25% | Compound heat-drought stress |
 
 ### 4.2.2 Computational Procedure
 
 For each scenario, the following pipeline is applied:
 1. Load the baseline dataset of 600 observations (6 regions x 4 crops x 25 years).
-2. Apply the same feature scaling used during model training.
-3. Perturb the scaled climate variables according to the scenario definition.
+2. Apply the same scaling used during model training.
+3. Modify the climate variables according to the scenario definition.
 4. Run forward prediction using the trained TCN-MLP model.
 5. Compute percentage yield response using:
 
@@ -42,17 +42,16 @@ $$
 \Delta Y(\%) = \frac{Y_{scenario} - Y_{baseline}}{Y_{baseline}} \times 100
 $$
 
-6. Aggregate outputs by region and crop to reveal vulnerability structure.
+6. Aggregate outputs by region and crop to reveal the vulnerability structure.
 
 ### 4.2.3 Rationale for Feature-Space Perturbation
 
 The adopted approach is suitable for a B.Tech level predictive impact study because it:
 1. reuses learned nonlinear climate-yield relationships from the trained model,
-2. enables fast, repeatable, and transparent scenario testing,
-3. avoids expensive climate-physics coupling outside project scope, and
-4. supports uncertainty discussion using available validation statistics.
+2. enables fast, repeatable, and transparent scenario testing, and
+3. avoids the need for a full climate-physics coupling, which is outside the project scope.
 
-Model reliability in this chapter is interpreted alongside cross-validation performance (approximately CV R2 = 0.83).
+Model reliability is interpreted alongside the cross-validation performance reported in the notebook.
 
 ---
 
@@ -64,27 +63,20 @@ Table 4.2 reports mean projected yield changes under each scenario.
 
 | Scenario | Mean Yield Impact |
 |----------|-------------------|
-| Warming +1C | -23.1% |
-| Warming +2C | -43.8% |
-| Drought -20% | -32.3% |
-| Drought -40% | -46.8% |
-| Flooding +40% | +197.4% (model artifact risk) |
-| Extreme (2C + Drought) | -53.5% |
+| Warming +1C | -3.48% |
+| Warming +2C | -4.99% |
+| Drought -20% | -2.70% |
+| Drought -40% | -5.67% |
+| Flooding +30% | +1.37% |
+| Extreme (2C + Drought) | -5.26% |
 
-The dominant result is that compound stress (warming + drought) produces the strongest decline, reducing average yield by more than half relative to baseline.
+The dominant result is that the compound heat-drought scenario produces the strongest decline in yield. The flooding case shows only a small positive response, so it should be interpreted cautiously rather than treated as a realistic production gain.
 
 ### 4.3.2 Regional Differentiation
 
-Under the extreme scenario, the most vulnerable regions are:
-1. South-East (-18.3%),
-2. South-West (-17.2%), and
-3. North-Central (-16.4%).
+Under the notebook evaluation, South-West has the highest food security risk score (0.820), followed by South-East (0.801) and North-Central (0.788). North-East (0.294) and North-West (0.286) are the least exposed regions in this model setting.
 
-The most resilient regions are:
-1. North-West (-2.8%), and
-2. North-East (+1.3%).
-
-This regional contrast is consistent with observed baseline variability. Regions with higher baseline yield volatility tend to exhibit larger stress responses.
+This regional contrast indicates that vulnerability is not evenly distributed. The higher-risk zones are the best candidates for targeted adaptation support.
 
 ---
 
@@ -92,28 +84,7 @@ This regional contrast is consistent with observed baseline variability. Regions
 
 ### 4.4.1 Composite Risk Formulation
 
-Regional food security exposure is summarized using a bounded risk index:
-
-$$
-Risk = 0.4R_{extreme} + 0.3R_{drought} + 0.3R_{stability}
-$$
-
-Component definitions:
-1. $R_{extreme}$ captures severe loss under compound stress:
-  if loss >= 15%, score = 1.0;
-  if loss is 5% to 15%, score = 0.5;
-  if loss < 5%, score = 0.
-2. $R_{drought}$ captures response to drought:
-  if loss >= 20%, score = 1.0;
-  if loss is 10% to 20%, score = 0.5;
-  if loss < 10%, score = 0.
-3. $R_{stability}$ represents volatility amplification under stress using the ratio:
-
-$$
-R_{stability} = 0.3 \times \frac{CV_{stress}}{CV_{baseline}}
-$$
-
-where higher values indicate reduced production stability.
+Regional food security exposure is summarized using a composite risk score derived from the severe-loss case, the drought response, and the stability of yield under stress. Higher values indicate greater vulnerability.
 
 ### 4.4.2 Regional Risk Ranking
 
@@ -134,22 +105,9 @@ The ranking indicates that risk is not uniformly distributed and should be addre
 
 ### 4.5.1 Sensitivity Metric
 
-Crop sensitivity is computed from normalized responses to warming, drought, and compound stress:
+The notebook ranks cassava as the most sensitive crop, with an overall sensitivity score of 3.003. Yam follows at 1.811 and is classified as moderately sensitive. Rice is also moderately sensitive, while maize is the most resilient crop in this evaluation.
 
-$$
-Sensitivity = \frac{1}{3}\left(\left|\frac{Impact_{warming}}{+2C}\right| + \left|\frac{Impact_{drought}}{-40\%}\right| + \left|\frac{Impact_{extreme}}{compound}\right|\right)
-$$
-
-### 4.5.2 Crop Ranking
-
-| Crop | Sensitivity Score | Classification |
-|------|-------------------|----------------|
-| Cassava | 13.9 | Highly sensitive |
-| Maize | 8.2 | Moderately sensitive |
-| Rice | 6.5 | Moderately sensitive |
-| Yam | 5.0 | Relatively resilient |
-
-These results indicate cassava as the most climate-sensitive crop in the current dataset, while yam appears comparatively robust.
+These results suggest that crop adaptation should prioritize cassava, especially in regions already identified as highly vulnerable.
 
 ---
 
@@ -200,7 +158,7 @@ Yam:
 
 ## 4.7 Practical Food Security Outlook
 
-Baseline mean yield is approximately 5,980 kg/ha, while the extreme scenario projects about 2,774 kg/ha (a 53.5% reduction). If such a decline occurs in reality, household food availability and market supply would be substantially reduced, especially in already volatile regions.
+Baseline mean yield is approximately 5,980 kg/ha, while the notebook reports a potential food security gap of about 12.4% under the extreme scenario. In practical terms, this would still imply a meaningful reduction in available food supply, especially in already volatile regions.
 
 This supports a key thesis position: climate stress will likely amplify existing regional inequality in agricultural productivity unless targeted adaptation is implemented.
 
@@ -210,8 +168,8 @@ This supports a key thesis position: climate stress will likely amplify existing
 
 The following limitations should guide interpretation:
 1. Scenario simulation is feature-based and not a full climate-physics forecast.
-2. Model behavior is constrained by historical data (1999 to 2023).
-3. The flooding response (+197.4%) is likely an extrapolation artifact and should be treated cautiously.
+2. Model behavior is constrained by historical data from 1999 to 2023.
+3. The flooding case gives only a small positive response, which suggests that extrapolation sensitivity should be considered when interpreting non-drought scenarios.
 4. Socioeconomic, infrastructure, and soil heterogeneity are not fully modeled at sub-regional scale.
 5. Policy recommendations assume implementation capacity that may vary across states.
 
@@ -221,11 +179,11 @@ The following limitations should guide interpretation:
 
 This chapter demonstrates that the trained TCN-MLP model can be used as a decision-support tool for climate-food security analysis. The core findings are:
 1. compound heat-drought stress is the strongest threat to yield,
-2. South-West, South-East, and North-Central are priority vulnerability zones,
-3. cassava is the most climate-sensitive crop in the study,
+2. South-West, South-East, and North-Central are the priority vulnerability zones,
+3. cassava is the most climate-sensitive crop in the study, and
 4. adaptation planning should combine crop-specific and region-specific strategies.
 
-Overall, the evidence supports proactive climate adaptation as a necessary condition for food security resilience in Nigeria.
+Overall, the evidence supports proactive climate adaptation as an important condition for improving food security resilience in Nigeria.
 
 ---
 
@@ -234,5 +192,5 @@ Overall, the evidence supports proactive climate adaptation as a necessary condi
 Future work should:
 1. validate model estimates with independent field observations,
 2. align perturbation scenarios with externally sourced climate projection pathways,
-3. include additional drivers such as soil fertility dynamics, input use, and pest pressure,
+3. include additional drivers such as soil fertility, input use, and pest pressure
 4. deploy the model outputs in a monitoring dashboard for periodic policy review.
