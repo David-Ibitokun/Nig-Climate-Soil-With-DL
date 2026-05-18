@@ -1,0 +1,7 @@
+Model,Path,MetadataPath,HasMetadata,Role
+TCN_MLP_ENSEMBLE_best_fold.keras,..\models\TCN_MLP_ENSEMBLE_best_fold.keras,,False,primary_best_fold
+Fold_1,..\models\tcn_mlp_fold_1.keras,,False,ensemble_member
+Fold_2,..\models\tcn_mlp_fold_2.keras,,False,ensemble_member
+Fold_3,..\models\tcn_mlp_fold_3.keras,,False,ensemble_member
+Fold_4,..\models\tcn_mlp_fold_4.keras,,False,ensemble_member
+Fold_5,..\models\tcn_mlp_fold_5.keras,,False,ensemble_member

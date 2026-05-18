@@ -1,0 +1,5 @@
+Crop,SHAP_Top_Season,SHAP_Top_Season_Importance,FAO_Expected_Critical_Season,FAO_Expected_Detail,Alignment
+Cassava,Pre-Monsoon (Jan-Apr),53.98053741455078,Monsoon (May-Sep),June-August (establishment),Partial
+Maize,Pre-Monsoon (Jan-Apr),53.91704177856445,Monsoon (May-Sep),June-August (flower/grain fill),Partial
+Rice,Pre-Monsoon (Jan-Apr),57.05923080444336,Monsoon (May-Sep),July-September (reproduction),Partial
+Yam,Pre-Monsoon (Jan-Apr),58.71156311035156,Monsoon (May-Sep),May-July (establishment),Partial

@@ -1,0 +1,6 @@
+Fold,Path,Is_Best_Fold
+1,..\models\tcn_mlp_fold_1.keras,False
+2,..\models\tcn_mlp_fold_2.keras,False
+3,..\models\tcn_mlp_fold_3.keras,True
+4,..\models\tcn_mlp_fold_4.keras,False
+5,..\models\tcn_mlp_fold_5.keras,False

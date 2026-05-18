@@ -1,0 +1,8 @@
+Month,Rainfall_Range_mm,Range_Min,Range_Max,Mean_SHAP,Std_SHAP,N_Samples,Sign
+May,100-200,100,200,0.0,0.0,16,Negative (harmful)
+May,200-300,200,300,0.0,0.0,32,Negative (harmful)
+May,300-400,300,400,-13.915226936340332,75.84095764160156,80,Negative (harmful)
+May,400-500,400,500,-7.862548351287842,43.776817321777344,32,Negative (harmful)
+Jun,300-400,300,400,-3.403661012649536,14.836214065551758,20,Negative (harmful)
+Jun,400-500,400,500,0.0,0.0,40,Negative (harmful)
+Jul,400-500,400,500,248.12960815429688,320.61358642578125,8,Positive (beneficial)
