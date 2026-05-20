@@ -85,20 +85,23 @@ Key climate variables used in the model:
     
     with tab3:
         st.subheader("🌾 Crop Yield Data")
-        
+
         if "crop_sensitivity" in data:
             crop_sensitivity = data['crop_sensitivity']
-            st.dataframe(crop_sensitivity, use_container_width=True)
-            
-            fig = px.bar(
-                crop_sensitivity,
-                x='Crop',
-                y='Overall_Sensitivity',
-                title="Crop Climate Sensitivity",
-                color='Overall_Sensitivity',
-                color_continuous_scale="Reds",
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            if isinstance(crop_sensitivity, pd.DataFrame) and not crop_sensitivity.empty and {'Crop', 'Overall_Sensitivity'}.issubset(crop_sensitivity.columns):
+                st.dataframe(crop_sensitivity, use_container_width=True)
+
+                fig = px.bar(
+                    crop_sensitivity,
+                    x='Crop',
+                    y='Overall_Sensitivity',
+                    title="Crop Climate Sensitivity",
+                    color='Overall_Sensitivity',
+                    color_continuous_scale="Reds",
+                )
+                st.plotly_chart(fig, use_container_width=True)
+            else:
+                st.info("No crop sensitivity table available or required columns ('Crop','Overall_Sensitivity') are missing.")
     
     with tab4:
         st.subheader("🔗 Climate-Yield Relationships")

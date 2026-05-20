@@ -209,19 +209,20 @@ This provides a robust estimate of performance on unseen data.
     
     if "crop_sensitivity" in data:
         crop_sensitivity = data['crop_sensitivity']
-        
-        fig = px.bar(
-            crop_sensitivity,
-            x='Crop',
-            y='Overall_Sensitivity',
-            title="Crop Climate Sensitivity",
-            color='Overall_Sensitivity',
-            color_continuous_scale="Reds",
-            labels={'Overall_Sensitivity': 'Sensitivity Score'}
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        
-        st.dataframe(crop_sensitivity, use_container_width=True)
+        if isinstance(crop_sensitivity, pd.DataFrame) and not crop_sensitivity.empty and {'Crop', 'Overall_Sensitivity'}.issubset(crop_sensitivity.columns):
+            fig = px.bar(
+                crop_sensitivity,
+                x='Crop',
+                y='Overall_Sensitivity',
+                title="Crop Climate Sensitivity",
+                color='Overall_Sensitivity',
+                color_continuous_scale="Reds",
+                labels={'Overall_Sensitivity': 'Sensitivity Score'}
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.dataframe(crop_sensitivity, use_container_width=True)
+        else:
+            st.info("No crop sensitivity table available or required columns ('Crop','Overall_Sensitivity') are missing in results.")
     
     st.markdown("---")
     
@@ -230,20 +231,23 @@ This provides a robust estimate of performance on unseen data.
     
     if "food_security" in data:
         food_security = data["food_security"].copy()
-        fs_sorted = food_security.sort_values("Food_Security_Risk_Score", ascending=False)
-        
-        fig = px.bar(
-            fs_sorted,
-            x="Region",
-            y="Food_Security_Risk_Score",
-            title="Food Security Risk Score by Region",
-            labels={"Food_Security_Risk_Score": "Risk Score (Higher = More Vulnerable)"},
-            color="Food_Security_Risk_Score",
-            color_continuous_scale="Reds",
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        
-        st.dataframe(fs_sorted, use_container_width=True)
+        if isinstance(food_security, pd.DataFrame) and not food_security.empty and "Food_Security_Risk_Score" in food_security.columns:
+            fs_sorted = food_security.sort_values("Food_Security_Risk_Score", ascending=False)
+
+            fig = px.bar(
+                fs_sorted,
+                x="Region",
+                y="Food_Security_Risk_Score",
+                title="Food Security Risk Score by Region",
+                labels={"Food_Security_Risk_Score": "Risk Score (Higher = More Vulnerable)"},
+                color="Food_Security_Risk_Score",
+                color_continuous_scale="Reds",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+
+            st.dataframe(fs_sorted, use_container_width=True)
+        else:
+            st.info("No food security table available or required column 'Food_Security_Risk_Score' is missing in results.")
     
     st.markdown("---")
     

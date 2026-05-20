@@ -1,3 +1,7 @@
+---
+config:
+  theme: redux
+---
 graph TD
     %% Input Layer
     seq_in[Sequence Input]
@@ -6,25 +10,50 @@ graph TD
     year_in[Year Input]
 
     %% TCN Branch
-    subgraph TCN_Branch ["Temporal Convolutional Network"]
+    subgraph TCN_Branch [Temporal Convolutional Network]
         direction TB
+        
+        %% Initial Processing before Residual Blocks
         seq_in --> c1[Conv1D Causal] --> bn1[BatchNorm] --> do1[Dropout]
         
-        do1 --> add1[Add Residual 1]
-        do1 --> c2[Conv1D Dilated] --> bn2[BatchNorm] --> do2[Dropout]
+        %% --- Block 1: Dilation Rate 2 ---
+        do1 --> split1{Split}
         
-        do2 --> add2[Add Residual 2]
-        add1 --> c3[Conv1D Dilated] --> bn3[BatchNorm] --> do3[Dropout]
+        %% Right Path (Skip Connection for Block 1)
+        split1 --> skip1[Skip Connection]
         
-        add2 --> c4[Conv1D Pointwise]
-        c4 --> gap[Global Avg Pool]
-        c4 --> gmp[Global Max Pool]
+        %% Left Path (Main Path for Block 1)
+        split1 --> conv_d1[Conv1D Dilated] --> bn_d1[BatchNorm] --> drop_d1[Dropout]
+        
+        %% Merge at Add Residual 1
+        skip1 --> add1[Add Residual 1]
+        drop_d1 --> add1
+        
+        %% --- Block 2: Dilation Rate 4 ---
+        add1 --> split2{Split}
+        
+        %% Right Path (Skip Connection for Block 2)
+        %% This is the path the user noted was missing/unclear
+        split2 --> skip2[Skip Connection]
+        
+        %% Left Path (Main Path for Block 2)
+        split2 --> conv_d2[Conv1D Dilated] --> bn_d2[BatchNorm] --> drop_d2[Dropout]
+        
+        %% Merge at Add Residual 2
+        %% Both Skip2 and Drop_D2 merge here
+        skip2 --> add2[Add Residual 2]
+        drop_d2 --> add2
+        
+        %% Output of TCN
+        add2 --> c_pointwise[Conv1D Pointwise]
+        c_pointwise --> gap[Global Avg Pool]
+        c_pointwise --> gmp[Global Max Pool]
         gap --> tcn_merge[Concatenate Pools]
         gmp --> tcn_merge
     end
 
     %% Context Embeddings
-    subgraph Context_Branches ["Categorical & Temporal Context"]
+    subgraph Context_Branches [Categorical & Temporal Context]
         reg_in --> reg_emb[Region Embedding] --> reg_flat[Flatten]
         crop_in --> crop_emb[Crop Embedding] --> crop_flat[Flatten]
         year_in --> year_dense[Dense + ReLU] --> year_do[Dropout]
@@ -35,22 +64,27 @@ graph TD
     reg_flat --> fusion
     crop_flat --> fusion
     year_do --> fusion
-
-    subgraph MLP_Head ["Multi-Layer Perceptron"]
-        fusion --> mlp_d1[Dense + ReLU] --> mlp_bn[BatchNorm] --> mlp_do1[Dropout]
+    fusion -->  MLP_Head
+    subgraph MLP_Head [Multi-Layer Perceptron]
+        mlp_d1[Dense + ReLU] --> mlp_bn[BatchNorm] --> mlp_do1[Dropout]
         mlp_do1 --> mlp_d2[Dense + ReLU] --> mlp_do2[Dropout]
     end
 
+    MLP_Head --> Output
     %% Output
-    mlp_do2 --> out_layer[Dense Linear Output]
-    out_layer --> final["Final Yield Prediction"]
+    subgraph Output
+      out_layer[Dense Linear Output]
+      out_layer --> final[Final Yield Prediction kg/ha]
+    end
 
     %% Styling for readability
     classDef input fill:#bbdefb,stroke:#1565c0,color:#000;
     classDef process fill:#fff9c4,stroke:#fbc02d,color:#000;
     classDef merge fill:#c8e6c9,stroke:#2e7d32,color:#000;
     classDef output fill:#f8bbd0,stroke:#ad1457,color:#000;
+    classDef split fill:#e1bee7,stroke:#7b1fa2,color:#000;
 
     class seq_in,reg_in,crop_in,year_in input;
     class final output;
-    class tcn_merge,fusion merge;
+    class add1,add2,tcn_merge,fusion merge;
+    class split1,split2 split;
