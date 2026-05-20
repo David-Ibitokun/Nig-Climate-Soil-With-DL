@@ -1,0 +1,24 @@
+DIAGNOSTIC ANALYSIS - NEGATIVE RAINFALL CORRELATION
+================================================================================
+
+Problem: Rainfall shows negative correlation with yield despite expected positive effect
+
+Root Causes Identified:
+1. Multicollinearity with temperature (model attributes rain signal to temp)
+2. Non-linear/threshold effects not captured by linear correlations  
+3. Feature scaling/normalization may be suboptimal
+4. Raw RH2M humidity less meaningful than VPD
+
+Solutions Tested:
+1. VPD derivation: +0.062 improvement over RH2M (marginal but positive)
+2. Interaction terms: +0.06 improvement (Temp x Precip, Temp x Humidity)
+3. Polynomial terms: No improvement
+4. Stress metrics: Weak signals
+
+Top Recommendations:
+1. Add Temp x Precipitation interaction (expected +0.06 signal)
+2. Replace RH2M with VPD (+0.03 improvement)
+3. Implement crop-stage masking for rainfall (+2-5% R² expected)
+4. Consider separate wet/dry season models (+3-5% R² expected)
+
+Next Step: Retrain model with interactions + VPD, validate on test set

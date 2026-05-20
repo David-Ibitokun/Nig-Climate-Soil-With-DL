@@ -1,6 +1,6 @@
-# Climate Change & Food Security in Nigeria — TCN-MLP Project
+# Predicting Crop Yield from Climate Sequences Using a TCN-MLP Ensemble
 
-This repository contains the code, notebooks, models, and results for a TCN-MLP hybrid analysis of climate impacts on crop yields and regional food security in Nigeria.
+This repository contains the code, notebooks, models, and results for a TCN-MLP ensemble architecture that predicts crop yields from climate sequences in Nigeria.
 
 Status: active (core notebooks and Streamlit dashboard available)
 

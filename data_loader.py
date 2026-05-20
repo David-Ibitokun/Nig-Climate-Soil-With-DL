@@ -9,9 +9,9 @@ import streamlit as st
 
 
 _ROOT = Path(__file__).resolve().parent
-_RESULTS_DIR = _ROOT / "New_Changes" / "results"
-_RESULTS_DIR_ALT = _ROOT / "New_Changes" / "yield_changes" / "results"
-_MODELS_DIR = _ROOT / "New_Changes" / "models"
+_RESULTS_DIR = _ROOT / "results"
+_RESULTS_DIR_ALT = _ROOT / "results"  # Fallback to same location
+_MODELS_DIR = _ROOT / "models"
 
 
 def _png_is_mostly_blank(path: Path) -> bool:
@@ -112,6 +112,10 @@ def load_data() -> Dict[str, Any]:
     # Some pages refer to this as "resilience" (index by crop-region).
     resilience_path = _RESULTS_DIR / "Resilience_Index_by_CropRegion.csv"
     data["resilience"] = _read_csv(resilience_path)
+
+    # Ensemble metrics from TCN-MLP training
+    data["ensemble_metrics"] = _read_csv(_RESULTS_DIR / "ensemble_metrics_mapes_maase_trimmed.csv")
+    data["per_crop_ensemble"] = _read_csv(_RESULTS_DIR / "per_crop_ensemble_mapes_maase_trimmed.csv")
 
     data["metadata"] = _read_json(_MODELS_DIR / "TCN_MLP_Crops_Mini_metadata.json")
     data["summary"] = _read_text(_RESULTS_DIR / "TCN_MLP_4Crops_RESULTS.txt")

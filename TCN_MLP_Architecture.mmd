@@ -1,87 +1,56 @@
 graph TD
-    %% Inputs
-    SI["sequence_input\n12 × n_features"]
-    RI["region_input\nshape: 1"]
-    CI["crop_input\nshape: 1"]
-    YI["year_input\nn_year_features = 3\n(normalized year, sin, cos)"]
+    %% Input Layer
+    seq_in[Sequence Input]
+    reg_in[Region Input]
+    crop_in[Crop Input]
+    year_in[Year Input]
 
     %% TCN Branch
-    C1["Conv1D\n48 filters, kernel_size=3\npadding=causal\nactivation=relu"]
-    BN1["BatchNormalization"]
-    D1["Dropout\nrate=0.12"]
-
-    subgraph Residual_Block_1["Residual Block 1"]
-        C_DIL1["Conv1D\n48 filters, kernel_size=3\ndilation_rate=2\npadding=causal\nactivation=relu"]
-        BN_DIL1["BatchNormalization"]
-        D_DIL1["Dropout\nrate=0.12"]
-        ADD1(("Add"))
+    subgraph TCN_Branch ["Temporal Convolutional Network"]
+        direction TB
+        seq_in --> c1[Conv1D Causal] --> bn1[BatchNorm] --> do1[Dropout]
+        
+        do1 --> add1[Add Residual 1]
+        do1 --> c2[Conv1D Dilated] --> bn2[BatchNorm] --> do2[Dropout]
+        
+        do2 --> add2[Add Residual 2]
+        add1 --> c3[Conv1D Dilated] --> bn3[BatchNorm] --> do3[Dropout]
+        
+        add2 --> c4[Conv1D Pointwise]
+        c4 --> gap[Global Avg Pool]
+        c4 --> gmp[Global Max Pool]
+        gap --> tcn_merge[Concatenate Pools]
+        gmp --> tcn_merge
     end
 
-    subgraph Residual_Block_2["Residual Block 2"]
-        C_DIL2["Conv1D\n48 filters, kernel_size=3\ndilation_rate=4\npadding=causal\nactivation=relu"]
-        BN_DIL2["BatchNormalization"]
-        D_DIL2["Dropout\nrate=0.12"]
-        ADD2(("Add"))
+    %% Context Embeddings
+    subgraph Context_Branches ["Categorical & Temporal Context"]
+        reg_in --> reg_emb[Region Embedding] --> reg_flat[Flatten]
+        crop_in --> crop_emb[Crop Embedding] --> crop_flat[Flatten]
+        year_in --> year_dense[Dense + ReLU] --> year_do[Dropout]
     end
 
-    C_FINAL["Conv1D\n32 filters, kernel_size=1\nactivation=relu"]
-    GAP["GlobalAveragePooling1D"]
-    GMP["GlobalMaxPooling1D"]
-    CAT1["Concatenate\nTCN vector: 64 dims"]
+    %% Fusion & MLP Head
+    tcn_merge --> fusion[Concatenate All Features]
+    reg_flat --> fusion
+    crop_flat --> fusion
+    year_do --> fusion
 
-    %% Categorical + Year branches
-    RE["Region Embedding\ninput_dim=6, output_dim=4"]
-    RF["Flatten"]
-    CE["Crop Embedding\ninput_dim=4, output_dim=4"]
-    CF["Flatten"]
-    YB["Dense(16)\nactivation=relu\nkernel_regularizer=L2(1e-3)"]
-    YD["Dropout\nrate=0.12"]
+    subgraph MLP_Head ["Multi-Layer Perceptron"]
+        fusion --> mlp_d1[Dense + ReLU] --> mlp_bn[BatchNorm] --> mlp_do1[Dropout]
+        mlp_do1 --> mlp_d2[Dense + ReLU] --> mlp_do2[Dropout]
+    end
 
-    %% Global merger & MLP
-    CAT2["Concatenate\n[64 + 4 + 4 + 16] = 88 dims"]
-    FC1["Dense(40)\nactivation=relu\nkernel_regularizer=L2(1e-3)"]
-    BN2["BatchNormalization"]
-    D2["Dropout\nrate=0.12"]
-    FC2["Dense(20)\nactivation=relu\nkernel_regularizer=L2(1e-3)"]
-    D3["Dropout\nrate=0.12"]
-    OUT["Dense(1)\nactivation=linear\nnormalized log-yield"]
+    %% Output
+    mlp_do2 --> out_layer[Dense Linear Output]
+    out_layer --> final["Final Yield Prediction"]
 
-    SI --> C1 --> BN1 --> D1 --> C_DIL1
-    D1 --> C_DIL1
-    C_DIL1 --> BN_DIL1 --> D_DIL1 --> ADD1
-    D1 -- identity --> ADD1
+    %% Styling for readability
+    classDef input fill:#bbdefb,stroke:#1565c0,color:#000;
+    classDef process fill:#fff9c4,stroke:#fbc02d,color:#000;
+    classDef merge fill:#c8e6c9,stroke:#2e7d32,color:#000;
+    classDef output fill:#f8bbd0,stroke:#ad1457,color:#000;
 
-    ADD1 --> C_DIL2
-    ADD1 --> C_DIL2
-    C_DIL2 --> BN_DIL2 --> D_DIL2 --> ADD2
-    ADD1 -- identity --> ADD2
-
-    ADD2 --> C_FINAL --> GAP
-    C_FINAL --> GMP
-    GAP --> CAT1
-    GMP --> CAT1
-
-    RI --> RE --> RF
-    CI --> CE --> CF
-    YI --> YB --> YD
-
-    CAT1 --> CAT2
-    RF --> CAT2
-    CF --> CAT2
-    YD --> CAT2
-
-    CAT2 --> FC1 --> BN2 --> D2 --> FC2 --> D3 --> OUT
-
-    classDef input fill:#1f77b4,stroke:#fff,stroke-width:2px,color:#fff
-    classDef tcn fill:#9467bd,stroke:#fff,stroke-width:2px,color:#fff
-    classDef categorical fill:#2ca02c,stroke:#fff,stroke-width:2px,color:#fff
-    classDef trend fill:#ff7f0e,stroke:#fff,stroke-width:2px,color:#fff
-    classDef mlp fill:#c85a54,stroke:#fff,stroke-width:2px,color:#fff
-    classDef output fill:#17becf,stroke:#fff,stroke-width:3px,color:#fff
-
-    class SI,RI,CI,YI input
-    class C1,BN1,D1,C_DIL1,BN_DIL1,D_DIL1,ADD1,C_DIL2,BN_DIL2,D_DIL2,ADD2,C_FINAL,GAP,GMP,CAT1 tcn
-    class RE,RF,CE,CF categorical
-    class YB,YD trend
-    class FC1,BN2,D2,FC2,D3,OUT mlp
-    class CAT2 output
+    class seq_in,reg_in,crop_in,year_in input;
+    class final output;
+    class tcn_merge,fusion merge;
