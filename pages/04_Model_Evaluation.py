@@ -73,6 +73,8 @@ Comprehensive evaluation metrics and visualizations for the TCN-MLP Ensemble mod
 
         fold_metrics = ensemble_metrics.copy()
         fig_metrics = go.Figure()
+        # Include R² alongside error metrics for fold-level comparison
+        fig_metrics.add_trace(go.Bar(x=fold_metrics['Fold'], y=fold_metrics['Ensemble_R2'], name='R²', marker_color='#4C78A8'))
         fig_metrics.add_trace(go.Bar(x=fold_metrics['Fold'], y=fold_metrics['Ensemble_MAPE'], name='MAPE', marker_color='#1f77b4'))
         fig_metrics.add_trace(go.Bar(x=fold_metrics['Fold'], y=fold_metrics['Ensemble_sMAPE'], name='sMAPE', marker_color='#ff7f0e'))
         fig_metrics.add_trace(go.Bar(x=fold_metrics['Fold'], y=fold_metrics['Ensemble_MASE'], name='MASE', marker_color='#2ca02c'))
@@ -85,10 +87,10 @@ Comprehensive evaluation metrics and visualizations for the TCN-MLP Ensemble mod
             hovermode="x unified",
             height=420,
         )
-        st.plotly_chart(fig_metrics, use_container_width=True)
+        st.plotly_chart(fig_metrics, width='stretch')
         
         # Display fold metrics table
-        st.dataframe(ensemble_metrics.round(4), use_container_width=True, hide_index=True)
+        st.dataframe(ensemble_metrics.round(4), width='stretch', hide_index=True)
         
     else:
         st.warning("Ensemble metrics not found. Please ensure ensemble_metrics_mapes_maase_trimmed.csv exists in results folder.")
@@ -115,9 +117,9 @@ Comprehensive evaluation metrics and visualizations for the TCN-MLP Ensemble mod
             height=420,
             hovermode="x unified",
         )
-        st.plotly_chart(region_fig, use_container_width=True)
+        st.plotly_chart(region_fig, width='stretch')
 
-        st.dataframe(region_table.round(4), use_container_width=True, hide_index=True)
+        st.dataframe(region_table.round(4), width='stretch', hide_index=True)
 
         st.markdown("---")
         st.subheader("📊 Regional Interpretation")
@@ -205,51 +207,51 @@ This provides a robust estimate of performance on unseen data.
     st.markdown("---")
     
     # Crop-specific performance from results
-    st.subheader("🌾 Crop-Specific Climate Sensitivity")
+    # st.subheader("🌾 Crop-Specific Climate Sensitivity")
     
-    if "crop_sensitivity" in data:
-        crop_sensitivity = data['crop_sensitivity']
-        if isinstance(crop_sensitivity, pd.DataFrame) and not crop_sensitivity.empty and {'Crop', 'Overall_Sensitivity'}.issubset(crop_sensitivity.columns):
-            fig = px.bar(
-                crop_sensitivity,
-                x='Crop',
-                y='Overall_Sensitivity',
-                title="Crop Climate Sensitivity",
-                color='Overall_Sensitivity',
-                color_continuous_scale="Reds",
-                labels={'Overall_Sensitivity': 'Sensitivity Score'}
-            )
-            st.plotly_chart(fig, use_container_width=True)
-            st.dataframe(crop_sensitivity, use_container_width=True)
-        else:
-            st.info("No crop sensitivity table available or required columns ('Crop','Overall_Sensitivity') are missing in results.")
+    # if "crop_sensitivity" in data:
+    #     crop_sensitivity = data['crop_sensitivity']
+    #     if isinstance(crop_sensitivity, pd.DataFrame) and not crop_sensitivity.empty and {'Crop', 'Overall_Sensitivity'}.issubset(crop_sensitivity.columns):
+    #         fig = px.bar(
+    #             crop_sensitivity,
+    #             x='Crop',
+    #             y='Overall_Sensitivity',
+    #             title="Crop Climate Sensitivity",
+    #             color='Overall_Sensitivity',
+    #             color_continuous_scale="Reds",
+    #             labels={'Overall_Sensitivity': 'Sensitivity Score'}
+    #         )
+    #         st.plotly_chart(fig, use_container_width=True)
+    #         st.dataframe(crop_sensitivity, use_container_width=True)
+    #     else:
+    #         st.info("No crop sensitivity table available or required columns ('Crop','Overall_Sensitivity') are missing in results.")
     
-    st.markdown("---")
+    # st.markdown("---")
     
-    # Regional Analysis
-    st.subheader("🗺️ Regional Food Security Risk")
+    # # Regional Analysis
+    # st.subheader("🗺️ Regional Food Security Risk")
     
-    if "food_security" in data:
-        food_security = data["food_security"].copy()
-        if isinstance(food_security, pd.DataFrame) and not food_security.empty and "Food_Security_Risk_Score" in food_security.columns:
-            fs_sorted = food_security.sort_values("Food_Security_Risk_Score", ascending=False)
+    # if "food_security" in data:
+    #     food_security = data["food_security"].copy()
+    #     if isinstance(food_security, pd.DataFrame) and not food_security.empty and "Food_Security_Risk_Score" in food_security.columns:
+    #         fs_sorted = food_security.sort_values("Food_Security_Risk_Score", ascending=False)
 
-            fig = px.bar(
-                fs_sorted,
-                x="Region",
-                y="Food_Security_Risk_Score",
-                title="Food Security Risk Score by Region",
-                labels={"Food_Security_Risk_Score": "Risk Score (Higher = More Vulnerable)"},
-                color="Food_Security_Risk_Score",
-                color_continuous_scale="Reds",
-            )
-            st.plotly_chart(fig, use_container_width=True)
+    #         fig = px.bar(
+    #             fs_sorted,
+    #             x="Region",
+    #             y="Food_Security_Risk_Score",
+    #             title="Food Security Risk Score by Region",
+    #             labels={"Food_Security_Risk_Score": "Risk Score (Higher = More Vulnerable)"},
+    #             color="Food_Security_Risk_Score",
+    #             color_continuous_scale="Reds",
+    #         )
+    #         st.plotly_chart(fig, use_container_width=True)
 
-            st.dataframe(fs_sorted, use_container_width=True)
-        else:
-            st.info("No food security table available or required column 'Food_Security_Risk_Score' is missing in results.")
+    #         st.dataframe(fs_sorted, use_container_width=True)
+    #     else:
+    #         st.info("No food security table available or required column 'Food_Security_Risk_Score' is missing in results.")
     
-    st.markdown("---")
+    # st.markdown("---")
     
     st.subheader("🔍 Model Limitations")
     

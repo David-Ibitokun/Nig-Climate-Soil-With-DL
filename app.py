@@ -2,6 +2,19 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 from data_loader import apply_global_style, load_data
+import re
+
+CLIMATE_PARAMETER_CODES = [
+    "T2M",
+    "T2M_MAX",
+    "T2M_MIN",
+    "TS",
+    "PRECTOTCORR",
+    "RH2M",
+    "QV2M",
+    "T2MDEW",
+    "T2MWET",
+]
 
 
 def main():
@@ -87,9 +100,36 @@ Navigate through the sidebar to explore predictions, data, model architecture, e
         st.metric("Crops", "4", "Maize, Rice, Cassava, Yam")
 
     with col4:
+        # Prefer metadata value, otherwise infer from processed_dataset column patterns like 'T2M_m1'..'T2M_m12'
+        n_temporal = None
+        meta_data = meta.get('data', {}) if isinstance(meta, dict) else {}
+        if isinstance(meta_data, dict) and meta_data.get('n_temporal_features'):
+            try:
+                n_temporal = int(meta_data.get('n_temporal_features'))
+            except Exception:
+                n_temporal = None
+
+        if n_temporal is None:
+            # Use the exact nine climate parameters that were used in training.
+            n_temporal = len(CLIMATE_PARAMETER_CODES)
+
+        if n_temporal is None:
+            # Fallback: infer from processed_dataset column patterns like 'T2M_m1'..
+            processed = data.get('processed_dataset') if isinstance(data.get('processed_dataset'), pd.DataFrame) else pd.DataFrame()
+            if not processed.empty:
+                prefixes = set()
+                for c in processed.columns:
+                    m = re.match(r"(.+)_m1$", c)
+                    if m:
+                        prefixes.add(m.group(1))
+                n_temporal = len(prefixes)
+            else:
+                n_temporal = 0
+
         st.metric(
             "Temporal Features",
-            f"{(meta.get('data', {}) or {}).get('n_temporal_features', 0)}",
+            f"{n_temporal}",
+            help="9 climate parameters used in training: " + ", ".join(CLIMATE_PARAMETER_CODES),
         )
 
     st.markdown("---")

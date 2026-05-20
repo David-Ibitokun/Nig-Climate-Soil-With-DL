@@ -173,7 +173,7 @@ Fourth, the project-specific risk and resilience outputs provide a useful decisi
 
         if not crop_sensitivity.empty:
             st.markdown("##### Crop sensitivity snapshot")
-            st.dataframe(crop_sensitivity.round(4), use_container_width=True, hide_index=True)
+            st.dataframe(crop_sensitivity.round(4), width='stretch', hide_index=True)
 
     with tab_institution:
         st.markdown(

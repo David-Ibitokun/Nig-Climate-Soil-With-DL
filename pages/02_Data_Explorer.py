@@ -48,8 +48,8 @@ Explore the climate and yield datasets to understand distributions, relationship
                 color="Food_Security_Risk_Score",
                 color_continuous_scale="Reds",
             )
-            st.plotly_chart(fig, use_container_width=True)
-            st.dataframe(fs_sorted, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
+            st.dataframe(fs_sorted, width='stretch')
         elif not region_metrics.empty and "Resilience_Index" in region_metrics.columns:
             region_sorted = region_metrics.sort_values("Resilience_Index", ascending=False)
 
@@ -62,8 +62,8 @@ Explore the climate and yield datasets to understand distributions, relationship
                 color="Resilience_Index",
                 color_continuous_scale="RdYlGn",
             )
-            st.plotly_chart(fig, use_container_width=True)
-            st.dataframe(region_sorted, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
+            st.dataframe(region_sorted, width='stretch')
         else:
             st.info("No region-level food security or resilience data was found in the loaded results.")
     
@@ -89,7 +89,7 @@ Key climate variables used in the model:
         if "crop_sensitivity" in data:
             crop_sensitivity = data['crop_sensitivity']
             if isinstance(crop_sensitivity, pd.DataFrame) and not crop_sensitivity.empty and {'Crop', 'Overall_Sensitivity'}.issubset(crop_sensitivity.columns):
-                st.dataframe(crop_sensitivity, use_container_width=True)
+                st.dataframe(crop_sensitivity, width='stretch')
 
                 fig = px.bar(
                     crop_sensitivity,
@@ -99,7 +99,7 @@ Key climate variables used in the model:
                     color='Overall_Sensitivity',
                     color_continuous_scale="Reds",
                 )
-                st.plotly_chart(fig, use_container_width=True)
+                st.plotly_chart(fig, width='stretch')
             else:
                 st.info("No crop sensitivity table available or required columns ('Crop','Overall_Sensitivity') are missing.")
     

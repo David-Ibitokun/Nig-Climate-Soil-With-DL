@@ -176,7 +176,7 @@ The current page is still a coarse scenario interface. The real network consumes
     st.markdown("---")
 
     # Prediction (real path)
-    if st.button("🚀 Generate Prediction", type="primary", use_container_width=True):
+    if st.button("🚀 Generate Prediction", type="primary", width='stretch'):
         st.info("Running full inference pipeline: preprocessing, model loading, ensemble prediction, denormalization.")
 
         try:
