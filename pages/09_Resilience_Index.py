@@ -23,7 +23,7 @@ Higher resilience indicates more stable yields despite climate fluctuations.
     resilience_image = results_dir / "climate_resilience_index_heatmap.png"
     if resilience_image.exists():
         img = Image.open(resilience_image)
-        st.image(img, use_column_width=True, caption="Climate Resilience Index: Green = High Resilience, Red = Low Resilience")
+        st.image(img, width="stretch", caption="Climate Resilience Index: Green = High Resilience, Red = Low Resilience")
     else:
         st.warning("Climate resilience index image not found. Please run the notebook first.")
     

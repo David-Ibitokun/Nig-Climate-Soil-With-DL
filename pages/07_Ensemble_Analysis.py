@@ -24,7 +24,7 @@ Visualizes fold-wise results and per-crop model accuracy.
     dashboard_image = results_dir / "ensemble_dashboard_highres.png"
     if dashboard_image.exists():
         img = Image.open(dashboard_image)
-        st.image(img, use_column_width=True, caption="Fold-wise Ensemble R² | Per-Crop Results | Actual vs Predicted | Regional Uncertainty")
+        st.image(img, width="stretch", caption="Fold-wise Ensemble R² | Per-Crop Results | Actual vs Predicted | Regional Uncertainty")
     else:
         st.warning("Ensemble dashboard image not found. Please run the notebook first.")
     

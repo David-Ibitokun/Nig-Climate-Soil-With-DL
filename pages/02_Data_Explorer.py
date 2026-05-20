@@ -27,16 +27,18 @@ Explore the climate and yield datasets to understand distributions, relationship
         with col2:
             st.metric("Regions", "6", "Geopolitical zones in Nigeria")
         with col3:
-            st.metric("Years Covered", "24", "2000-2024")
+            st.metric("Years Covered", "25", "1999-2023")
         
         st.markdown("---")
         
         st.subheader("🌾 Food Security Risk by Region")
         
-        if "food_security" in data:
-            food_security = data["food_security"].copy()
+        food_security = data.get("food_security", pd.DataFrame()).copy()
+        region_metrics = data.get("region_ensemble_metrics", pd.DataFrame()).copy()
+
+        if not food_security.empty and "Food_Security_Risk_Score" in food_security.columns:
             fs_sorted = food_security.sort_values("Food_Security_Risk_Score", ascending=False)
-            
+
             fig = px.bar(
                 fs_sorted,
                 x="Region",
@@ -48,6 +50,22 @@ Explore the climate and yield datasets to understand distributions, relationship
             )
             st.plotly_chart(fig, use_container_width=True)
             st.dataframe(fs_sorted, use_container_width=True)
+        elif not region_metrics.empty and "Resilience_Index" in region_metrics.columns:
+            region_sorted = region_metrics.sort_values("Resilience_Index", ascending=False)
+
+            fig = px.bar(
+                region_sorted,
+                x="Region",
+                y="Resilience_Index",
+                title="Climate Resilience Index by Region",
+                labels={"Resilience_Index": "Resilience Index"},
+                color="Resilience_Index",
+                color_continuous_scale="RdYlGn",
+            )
+            st.plotly_chart(fig, use_container_width=True)
+            st.dataframe(region_sorted, use_container_width=True)
+        else:
+            st.info("No region-level food security or resilience data was found in the loaded results.")
     
     with tab2:
         st.subheader("🌡️ Climate Variables")

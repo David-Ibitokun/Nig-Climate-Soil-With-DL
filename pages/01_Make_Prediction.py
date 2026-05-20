@@ -15,6 +15,34 @@ Select your inputs and the model will provide yield predictions with confidence 
     """)
     
     data = load_data()
+    processed_dataset = data.get("processed_dataset") if isinstance(data.get("processed_dataset"), pd.DataFrame) else pd.DataFrame()
+
+    if not processed_dataset.empty:
+        crop_options = sorted(processed_dataset["Crop"].dropna().unique().tolist())
+        region_options = sorted(processed_dataset["Region"].dropna().unique().tolist())
+        year_min, year_max = 2026, 2030
+    else:
+        crop_options = ["Maize", "Rice", "Cassava", "Yam"]
+        region_options = ["North-Central", "North-East", "North-West", "South-East", "South-South", "South-West"]
+        year_min, year_max = 2026, 2030
+
+    def _series_stats(column_name: str, default: tuple[float, float, float]) -> tuple[float, float, float]:
+        if processed_dataset.empty or column_name not in processed_dataset.columns:
+            return default
+
+        values = processed_dataset[column_name].dropna()
+        if values.empty:
+            return default
+
+        return (
+            float(values.quantile(0.05)),
+            float(values.median()),
+            float(values.quantile(0.95)),
+        )
+
+    temp_min, temp_default, temp_max = _series_stats("T2M_m1", (23.3, 25.7, 30.5))
+    rainfall_min, rainfall_default, rainfall_max = _series_stats("PRECTOTCORR_m1", (0.0, 540.7, 2068.0))
+    humidity_min, humidity_default, humidity_max = _series_stats("RH2M_m1", (21.6, 79.9, 90.7))
     
     # Prediction interface
     st.subheader("📋 Select Parameters")
@@ -24,61 +52,79 @@ Select your inputs and the model will provide yield predictions with confidence 
     with col1:
         crop = st.selectbox(
             "Select Crop",
-            ["Maize", "Rice", "Cassava", "Yam"]
+            crop_options
         )
     
     with col2:
         region = st.selectbox(
             "Select Region",
-            ["North-Central", "North-East", "North-West", "South-East", "South-South", "South-West"]
+            region_options
         )
     
     with col3:
         year = st.slider(
             "Select Year",
-            min_value=2026,
-            max_value=2030,
-            value=2026
+            min_value=year_min,
+            max_value=year_max,
+            value=year_max
         )
     
     st.markdown("---")
     
-    st.subheader("🌡️ Climate Variables")
+    st.subheader("🌡️ Climate Reference Inputs")
+
+    st.caption(
+        "The trained model uses a 12-month climate sequence. These sliders provide a coarse historical reference profile based on the processed dataset."
+    )
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
         temp = st.slider(
-            "Average Temperature (°C)",
-            min_value=15.0,
-            max_value=35.0,
-            value=27.5,
+            "Reference Monthly Mean Temperature (°C)",
+            min_value=float(round(temp_min, 1)),
+            max_value=float(round(temp_max, 1)),
+            value=float(round(temp_default, 1)),
             step=0.5
         )
     
     with col2:
         rainfall = st.slider(
-            "Annual Rainfall (mm)",
-            min_value=500.0,
-            max_value=3000.0,
-            value=1200.0,
-            step=50.0
+            "Reference Monthly Rainfall (mm)",
+            min_value=float(round(rainfall_min, 1)),
+            max_value=float(round(rainfall_max, 1)),
+            value=float(round(rainfall_default, 1)),
+            step=10.0
         )
     
     with col3:
         humidity = st.slider(
-            "Relative Humidity (%)",
-            min_value=30.0,
-            max_value=90.0,
-            value=65.0,
+            "Reference Relative Humidity (%)",
+            min_value=float(round(humidity_min, 1)),
+            max_value=float(round(humidity_max, 1)),
+            value=float(round(humidity_default, 1)),
             step=1.0
+        )
+
+    with st.expander("Why these ranges?", expanded=False):
+        st.markdown(
+            f"""
+These controls are anchored to the processed dataset rather than arbitrary guesses.
+
+- **Year**: {year_min} to {year_max}, set as a future projection window.
+- **Temperature**: observed monthly mean-temperature distribution from the dataset.
+- **Rainfall**: observed monthly precipitation distribution from the dataset.
+- **Humidity**: observed monthly relative humidity distribution from the dataset.
+
+The current page is still a coarse scenario interface. The real network consumes 12 monthly values for 9 climate features, so a full inference form would need monthly sequence inputs rather than a single summary per variable.
+            """
         )
     
     st.markdown("---")
     
     # Make prediction
     if st.button("🚀 Generate Prediction", type="primary", use_container_width=True):
-        st.info("Model prediction would be generated here with the selected parameters.")
+        st.info("Illustrative prediction output shown here. The page still needs the full model inference pipeline to return a real ensemble forecast.")
         
         # Placeholder for actual prediction
         predicted_yield = np.random.normal(2500, 300)
@@ -102,11 +148,11 @@ Select your inputs and the model will provide yield predictions with confidence 
         **Crop**: {crop}  
         **Region**: {region}  
         **Year**: {year}  
-        **Temperature**: {temp}°C  
-        **Rainfall**: {rainfall}mm  
-        **Humidity**: {humidity}%
+        **Reference Temperature**: {temp}°C  
+        **Reference Rainfall**: {rainfall}mm  
+        **Reference Humidity**: {humidity}%
         
-        The model estimates a yield of **{predicted_yield:.0f} kg/ha** with a 95% confidence interval 
+        This illustrative output estimates a yield of **{predicted_yield:.0f} kg/ha** with a 95% confidence interval 
         between {confidence_lower:.0f} and {confidence_upper:.0f} kg/ha based on the TCN-MLP ensemble.
         """)
 

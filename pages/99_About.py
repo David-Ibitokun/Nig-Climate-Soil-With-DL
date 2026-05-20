@@ -34,7 +34,7 @@ By understanding how climate variables during the growing season drive final cro
 #### **Geographic Coverage**
 - **Country**: Nigeria
 - **Regions**: 6 geopolitical zones
-- **Time Period**: 2000-2024 (24 years)
+- **Time Period**: 1999-2023 (25 years)
 
 #### **Crops Analyzed**
 - 🌾 Maize

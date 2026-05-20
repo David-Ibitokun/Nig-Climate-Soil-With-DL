@@ -10,7 +10,7 @@ def render():
     st.title("📈 Historical Yield Trends")
     
     st.markdown("""
-Historical analysis of crop and regional yield patterns from 2000-2024. 
+Historical analysis of crop and regional yield patterns from 1999-2023. 
 These visualizations show long-term trends and variability in agricultural productivity.
     """)
     
@@ -24,7 +24,7 @@ These visualizations show long-term trends and variability in agricultural produ
     trend_image = results_dir / "historical_yield_trends.png"
     if trend_image.exists():
         img = Image.open(trend_image)
-        st.image(img, use_column_width=True, caption="Historical Yield Trends (2000-2024)")
+        st.image(img, width="stretch", caption="Historical Yield Trends (1999-2023)")
     else:
         st.warning("Historical yield trends image not found. Please run the notebook first.")
     
@@ -32,7 +32,7 @@ These visualizations show long-term trends and variability in agricultural produ
     ### Key Insights:
     
     **Top Row:**
-    - Left: Individual crop yield trajectories over 24 years
+    - Left: Individual crop yield trajectories over 25 years
     - Right: Regional yield performance patterns
     
     **Bottom Row:**
@@ -67,7 +67,7 @@ These visualizations show long-term trends and variability in agricultural produ
     st.subheader("🔍 Data Summary")
     
     st.info("""
-    - **Time Period**: 2000-2024 (24 years of historical data)
+    - **Time Period**: 1999-2023 (25 years of historical data)
     - **Crops Analyzed**: Maize, Rice, Cassava, Yam
     - **Regions Covered**: All 6 geopolitical zones in Nigeria
     - **Data Source**: NASRDA agricultural census + MERRA-2 climate data

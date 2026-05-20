@@ -1,4 +1,6 @@
 import streamlit as st
+import pandas as pd
+import plotly.graph_objects as go
 from data_loader import apply_global_style, load_data
 
 
@@ -20,6 +22,39 @@ Navigate through the sidebar to explore predictions, data, model architecture, e
 
     st.markdown("---")
 
+    # --- Model evaluation summary (compact) ---
+    st.subheader("📈 Model Evaluation Summary")
+
+    data = load_data()
+    ensemble_metrics = data.get("ensemble_metrics") if isinstance(data.get("ensemble_metrics"), pd.DataFrame) else None
+    per_crop_ensemble = data.get("per_crop_ensemble") if isinstance(data.get("per_crop_ensemble"), pd.DataFrame) else None
+
+    avg_r2 = None
+    avg_mae = None
+    if ensemble_metrics is not None and not ensemble_metrics.empty:
+        avg_r2 = ensemble_metrics['Ensemble_R2'].mean()
+        avg_mae = ensemble_metrics['Ensemble_MAE'].mean()
+
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            st.metric("Avg R² (5-fold)", f"{avg_r2:.3f}")
+            st.metric("Avg MAE", f"{avg_mae:.1f} kg/ha")
+
+        with c2:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=ensemble_metrics['Fold'], y=ensemble_metrics['Ensemble_R2'], name='R²', marker_color='#1f77b4'))
+            fig.update_layout(title='Ensemble R² by Fold', xaxis_title='Fold', yaxis_title='R²', height=260, margin=dict(t=40,b=20))
+            st.plotly_chart(fig, use_container_width=True)
+
+        # show a compact per-crop table
+        if per_crop_ensemble is not None and not per_crop_ensemble.empty:
+            st.markdown("**Per-crop summary (top)**")
+            st.dataframe(per_crop_ensemble[['Crop','Ens_R2','Ens_MAE']].sort_values('Ens_R2', ascending=False).round(3).reset_index(drop=True), use_container_width=True)
+    else:
+        st.info("Model evaluation metrics not available. Open the 'Model Evaluation' page for full details.")
+
+    st.markdown("---")
+
     # Overview metrics
     st.subheader("📊 Model Overview")
     col1, col2, col3, col4 = st.columns(4)
@@ -31,18 +66,22 @@ Navigate through the sidebar to explore predictions, data, model architecture, e
     ensemble_upper = perf.get("ensemble_upper")
 
     with col1:
-        if ensemble_mean is not None:
+        if avg_r2 is not None:
+            st.metric("Avg R² (5-fold)", f"{avg_r2:.3f}")
+        elif ensemble_mean is not None:
             st.metric("Ensemble Mean Prediction", f"{ensemble_mean:.0f} kg/ha")
         else:
-            st.metric("Test R²", f"{perf.get('final_test_r2', 0):.4f}")
+            st.metric("Avg R² (5-fold)", "N/A")
 
     with col2:
-        if ensemble_std is not None:
+        if avg_mae is not None:
+            st.metric("Avg MAE", f"{avg_mae:.1f} kg/ha")
+        elif ensemble_std is not None:
             st.metric("Ensemble Std Dev", f"{ensemble_std:.0f} kg/ha")
         elif ensemble_lower is not None and ensemble_upper is not None:
             st.metric("Ensemble CI", f"{ensemble_lower:.0f}–{ensemble_upper:.0f} kg/ha")
         else:
-            st.metric("Test MAE", f"{perf.get('final_test_mae', 0):.1f} kg/ha")
+            st.metric("Avg MAE", "N/A")
 
     with col3:
         st.metric("Crops", "4", "Maize, Rice, Cassava, Yam")

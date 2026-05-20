@@ -23,7 +23,7 @@ Understanding these patterns is critical for explaining crop yield variability.
     climate_patterns = results_dir / "seasonal_climate_patterns.png"
     if climate_patterns.exists():
         img = Image.open(climate_patterns)
-        st.image(img, use_column_width=True, caption="Monthly Climate Patterns (Temperature, Rainfall, Humidity)")
+        st.image(img, width="stretch", caption="Monthly Climate Patterns (Temperature, Rainfall, Humidity)")
     else:
         st.warning("Seasonal climate patterns image not found. Please run the notebook first.")
     
