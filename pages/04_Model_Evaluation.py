@@ -88,6 +88,14 @@ Comprehensive evaluation metrics and visualizations for the TCN-MLP Ensemble mod
             height=420,
         )
         st.plotly_chart(fig_metrics, width='stretch')
+
+        st.info(
+            "The last fold can have a lower R² simply because its held-out records are a harder subset of the data. "
+            "In cross-validation, each fold uses a different crop-region-year mix, so one split may contain more unusual seasons, "
+            "more difficult region-crop combinations, or fewer samples that are easier to predict. That makes the R² for that fold "
+            "look weaker even when the model is behaving normally. The important result is the average across all five folds, "
+            "together with MAE, MAPE, sMAPE, and MASE, which give a more stable picture of overall performance."
+        )
         
         # Display fold metrics table
         st.dataframe(ensemble_metrics.round(4), width='stretch', hide_index=True)
