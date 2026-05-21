@@ -1,8 +1,17 @@
-# Minimal requirements for Streamlit deployment
-# This is optimized for running the Streamlit dashboard
-# All data is pre-computed and loaded from CSV files
+# Full project dependencies
+# Includes the Streamlit dashboard, inference stack, and data-download scripts.
 
 streamlit==1.52.2
 pandas>=2.0.0
 numpy>=2.0.0
 plotly>=6.0.0
+pillow>=10.0.0
+scikit-learn>=1.5.0
+tensorflow>=2.20.0
+requests>=2.31.0
+python-dotenv>=1.0.1
+scipy>=1.11.4
+matplotlib>=3.8.4
+seaborn>=0.13.2
+tqdm>=4.66.0
+shap>=0.50.0
