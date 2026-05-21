@@ -17,6 +17,10 @@ def render():
 Analysis of Nigeria's seasonal climate patterns including temperature, rainfall, and humidity.
 Understanding these patterns is critical for explaining crop yield variability.
     """)
+
+    st.markdown("""
+**Chapter 4 — Results:** Detailed evaluation, SHAP summaries and scenario projection maps that use these climate patterns are available at `notes/CHAPTER_4_TCN-MLP_Results_and_Discussion.md`.
+""")
     
     results_dir = Path(__file__).parent.parent / "results"
     
@@ -45,26 +49,32 @@ Understanding these patterns is critical for explaining crop yield variability.
         _, r_vals = monthly_mean(processed, 'PRECTOTCORR')
         _, h_vals = monthly_mean(processed, 'RH2M')
 
-        fig = make_subplots(rows=1, cols=3, subplot_titles=("Temperature (T2M)", "Rainfall (PRECTOTCORR)", "Relative Humidity (RH2M)"))
-
         month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
-        fig.add_trace(go.Scatter(x=month_names, y=t_vals, mode='lines+markers', line=dict(color='orangered'), name='Temperature (T2M)'), row=1, col=1)
-        fig.update_yaxes(title_text='°C', row=1, col=1)
+        # Create three separate figures and place them in Streamlit columns.
+        # Streamlit will stack columns vertically on small screens, giving a 3x1 layout automatically.
+        fig_t = go.Figure()
+        fig_t.add_trace(go.Scatter(x=month_names, y=t_vals, mode='lines+markers', line=dict(color='orangered')))
+        fig_t.update_layout(title_text='Temperature (T2M)', autosize=True, margin=dict(t=40))
+        fig_t.update_yaxes(title_text='°C')
 
-        fig.add_trace(go.Bar(x=month_names, y=r_vals, marker_color='steelblue', name='Rainfall (PRECTOTCORR)'), row=1, col=2)
-        fig.update_yaxes(title_text='mm/day', row=1, col=2)
+        fig_r = go.Figure()
+        fig_r.add_trace(go.Bar(x=month_names, y=r_vals, marker_color='steelblue'))
+        fig_r.update_layout(title_text='Rainfall (PRECTOTCORR)', autosize=True, margin=dict(t=40))
+        fig_r.update_yaxes(title_text='mm/day')
 
-        fig.add_trace(go.Scatter(x=month_names, y=h_vals, mode='lines+markers', line=dict(color='seagreen'), name='Relative Humidity (RH2M)'), row=1, col=3)
-        fig.update_yaxes(title_text='%', row=1, col=3)
+        fig_h = go.Figure()
+        fig_h.add_trace(go.Scatter(x=month_names, y=h_vals, mode='lines+markers', line=dict(color='seagreen')))
+        fig_h.update_layout(title_text='Relative Humidity (RH2M)', autosize=True, margin=dict(t=40))
+        fig_h.update_yaxes(title_text='%')
 
-        fig.update_layout(
-            height=420,
-            showlegend=True,
-            legend=dict(orientation='h', yanchor='bottom', y=1.18, xanchor='center', x=0.5),
-            margin=dict(t=120, b=20),
-        )
-        st.plotly_chart(fig, width='stretch')
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.plotly_chart(fig_t, use_container_width=True, config={'responsive': True})
+        with col2:
+            st.plotly_chart(fig_r, use_container_width=True, config={'responsive': True})
+        with col3:
+            st.plotly_chart(fig_h, use_container_width=True, config={'responsive': True})
     else:
         climate_patterns = results_dir / "seasonal_climate_patterns.png"
         if climate_patterns.exists():
@@ -73,6 +83,7 @@ Understanding these patterns is critical for explaining crop yield variability.
         else:
             st.warning("Seasonal climate patterns data not found. Please run the notebook first.")
 
+    st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
     st.markdown("---")
 
     st.subheader("📈 Annual Climate Patterns Over Time")
@@ -92,41 +103,71 @@ Understanding these patterns is critical for explaining crop yield variability.
 
     if not processed.empty:
         regions = sorted(processed['Region'].dropna().unique())
-        n_regions = len(regions)
-        cols = 3
-        rows = (n_regions + cols - 1) // cols
+        region_palette = [
+            '#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd',
+            '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf'
+        ]
+        region_colors = {region: region_palette[i % len(region_palette)] for i, region in enumerate(regions)}
+        month_names = None
 
-        fig = make_subplots(rows=rows, cols=cols, shared_xaxes=False, subplot_titles=regions, specs=[[{"secondary_y": True}]*cols for _ in range(rows)])
+        def annual_feature_by_region(feature_code: str):
+            fig = go.Figure()
+            feature_labels = {
+                'PRECTOTCORR': ('Precipitation (mm/day)', 'steelblue'),
+                'T2M': ('Temperature (°C)', 'orangered'),
+                'RH2M': ('Relative Humidity (%)', 'seagreen'),
+            }
+            y_label, color = feature_labels[feature_code]
 
-        for i, region in enumerate(regions):
-            r = i // cols + 1
-            c = i % cols + 1
-
-            region_df = processed[processed['Region'] == region]
-            p_df = annual_mean_feature(region_df, 'PRECTOTCORR')
-            t_df = annual_mean_feature(region_df, 'T2M')
-            h_df = annual_mean_feature(region_df, 'RH2M')
-
-            if not p_df.empty:
+            for region in regions:
+                region_df = processed[processed['Region'] == region]
+                annual_df = annual_mean_feature(region_df, feature_code)
+                if annual_df.empty:
+                    continue
                 fig.add_trace(
-                    go.Scatter(x=p_df['Year'], y=p_df['__feat_mean__'], mode='lines+markers', name=f'{region} Precip (mm/day)', line=dict(color='steelblue')),
-                    row=r, col=c, secondary_y=False
-                )
-            if not t_df.empty:
-                fig.add_trace(
-                    go.Scatter(x=t_df['Year'], y=t_df['__feat_mean__'], mode='lines+markers', name=f'{region} Temp (°C)', line=dict(color='orangered')),
-                    row=r, col=c, secondary_y=True
-                )
-            if not h_df.empty:
-                fig.add_trace(
-                    go.Scatter(x=h_df['Year'], y=h_df['__feat_mean__'], mode='lines+markers', name=f'{region} Humidity (%)', line=dict(color='seagreen')),
-                    row=r, col=c, secondary_y=True
+                    go.Scatter(
+                        x=annual_df['Year'],
+                        y=annual_df['__feat_mean__'],
+                        mode='lines+markers',
+                        name=region,
+                        line=dict(color=region_colors[region]),
+                        marker=dict(color=region_colors[region]),
+                    )
                 )
 
-            fig.update_xaxes(title_text='Year', row=r, col=c)
-
-        fig.update_layout(height=300 * rows, showlegend=False, title_text='Climate trends by region (1999-2023)')
-        st.plotly_chart(fig, width='stretch')
+            fig.update_layout(
+                title=dict(
+                    text=f'Annual {y_label} Trends by Region',
+                    x=0.5,
+                    xanchor='center',
+                    y=0.96,
+                    yanchor='top',
+                    font=dict(size=14),
+                ),
+                autosize=True,
+                height=430,
+                margin=dict(t=95, b=105, l=55, r=25),
+                legend=dict(
+                    orientation='h',
+                    yanchor='top',
+                    y=-0.28,
+                    xanchor='center',
+                    x=0.5,
+                    font=dict(size=9),
+                ),
+            )
+            fig.update_xaxes(title_text='Year')
+            fig.update_yaxes(title_text=y_label)
+            return fig
+        st.markdown("<div style='height: 1.5rem;'></div>", unsafe_allow_html=True)
+    
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.plotly_chart(annual_feature_by_region('PRECTOTCORR'), use_container_width=True, config={'responsive': True})
+        with col2:
+            st.plotly_chart(annual_feature_by_region('T2M'), use_container_width=True, config={'responsive': True})
+        with col3:
+            st.plotly_chart(annual_feature_by_region('RH2M'), use_container_width=True, config={'responsive': True})
     else:
         # fallback to image if processed dataset not available
         annual_trends = results_dir / "climate_trends_by_region_1999_2023.png"

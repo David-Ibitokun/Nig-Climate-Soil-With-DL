@@ -115,3 +115,39 @@ Status: Draft — comprehensive content added. I can now (choose one):
 - (C) Generate per-region appendix tables by parsing `results/region_ensemble_metrics.csv` and `results/spatial_generalization.csv`.
 
 Which option would you like me to perform next?
+
+
+## 4.11 Cross-references to project pages and notebooks (detailed)
+This chapter integrated results and interpretations drawn directly from the project's Streamlit pages and analysis notebooks. Below are specific implementation and experiment details that justify statements in the chapter and can be cited in methods or appendices.
+
+- `pages/03_Model_Architecture.py`: detailed architecture description and rationale. Key points used in Chapter 4:
+	- The temporal branch is a causal Conv1D-based TCN with two dilated residual blocks (dilations 2 and 4), followed by pointwise Conv1D and dual pooling (global average + max) to form the temporal summary.
+	- Context branches encode `Region` and `Crop` as embeddings; `Year` is encoded via normalized year plus sine/cosine and a small dense transform.
+	- Fusion is performed in an MLP head (dense 40 → batchnorm → dropout → dense 20 → dropout → linear output). Output is normalized log-yield that is inverted at post-processing.
+	- Ensemble behavior: 5-fold cross-validation creates the ensemble; fold predictions are averaged and ensemble spread used to form CI widths (this is the source of the `CI_Width_Mean` reported in results).
+
+- `pages/04_Model_Evaluation.py`: visualization and evaluation logic used to create the fold-level diagnostics and regional summaries referenced in the chapter. Notable reproduction details:
+	- Fold-level plotting aggregates `Ensemble_R2`, `Ensemble_MAPE`, `Ensemble_sMAPE`, and `Ensemble_MASE` into grouped bar charts for comparisons.
+	- Regional tables and per-region expanders present `R2`, `MAE`, `MAPE`, `sMAPE` which were incorporated into the region discussion in Section 4.4.
+
+- `pages/07_Ensemble_Analysis.py`: description of the ensemble dashboard and the `ensemble_dashboard_highres.png` artifact used as an executive visual summary (fold-wise R², per-crop R², actual vs predicted, and regional uncertainty summaries).
+
+- `pages/08_Climate_Patterns.py` and `notebooks/tcn_mlp_shap.ipynb`: the climate-features list and SHAP evaluation procedures.
+	- Climate features used across the project (from the notebook and the Climate Patterns page): `['T2M','T2M_MAX','T2M_MIN','TS','T2MDEW','T2MWET','PRECTOTCORR','RH2M','QV2M']` — these nine variables are the basis for SHAP and sensitivity analyses reported in Sections 4.4 and 4.6.
+	- SHAP Notebook implementation details (important for reproducibility and interpretation):
+		- Prefers `TCN_MLP_ENSEMBLE_best_fold.keras` for single-model explainability; falls back to `TCN_MLP_ENSEMBLE.keras` or fold checkpoints if needed.
+		- Supports a FULL-DATA explainability mode where scalers are fit on the entire dataset and SHAP is computed across all samples for domain-level attribution (this is the source of the full-dataset SHAP artifacts in `results/`).
+		- Uses `shap.KernelExplainer` on flattened climate tensors in the climate-only setup; background summaries are computed with `shap.kmeans` (background_k up to 40 for full-data mode) to stabilise KernelExplainer.
+		- The SHAP pipeline builds wrappers to predict yield in original units from climate-only inputs by fixing `region` and `crop` to modal IDs and reversing the crop-level log-normalization (`log_pred * crop_std + crop_mean` → `exp()`), so SHAP values are reported in kg/ha units.
+		- Adaptive `nsamples` up to 300 are used for KernelExplainer to balance compute time and estimate stability; estimated compute time reported in the notebook is 20–60 minutes depending on hardware.
+
+These specifics were used to (a) explain why SHAP values are presented in yield units, (b) justify the choice of KernelExplainer and background k-means summarization, and (c) provide reproducible parameters (background size, explain_size, explainer type) that can be added to the methods appendix or used to re-run experiments.
+
+---
+
+If you'd like, I can now:
+- (A) Embed selected figures with captions into this Markdown (I can insert the SHAP feature plots, calibration plot, and ensemble dashboard). 
+- (B) Export this chapter to LaTeX using `results/thesis_summary_table.tex` for table layouts.
+- (C) Auto-generate a reproducibility appendix listing exact notebook cells and the command sequence to reproduce the SHAP and evaluation artifacts.
+
+Which should I do next?
