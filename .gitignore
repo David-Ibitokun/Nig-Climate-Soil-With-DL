@@ -73,7 +73,6 @@ env/
 .env.local
 
 Large model files (uncomment if needed)
-*.keras
 *.h5
 *.pb
 *.onnx

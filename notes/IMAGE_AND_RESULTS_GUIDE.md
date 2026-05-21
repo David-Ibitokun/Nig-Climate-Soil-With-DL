@@ -167,7 +167,7 @@ def resolve_results_png(filename):
 # Usage:
 img_path = resolve_results_png("Crop_Climate_Sensitivity.png")
 if img_path.exists():
-    st.image(str(img_path), caption="Crop Sensitivity to Climate", use_container_width=True)
+    st.image(str(img_path), caption="Crop Sensitivity to Climate", width='stretch')
 ```
 
 **Key point:** Streamlit pages expect images in `New_Changes/results/` relative to the app root.

@@ -57,12 +57,12 @@ Navigate through the sidebar to explore predictions, data, model architecture, e
             fig = go.Figure()
             fig.add_trace(go.Bar(x=ensemble_metrics['Fold'], y=ensemble_metrics['Ensemble_R2'], name='R²', marker_color='#1f77b4'))
             fig.update_layout(title='Ensemble R² by Fold', xaxis_title='Fold', yaxis_title='R²', height=260, margin=dict(t=40,b=20))
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width='stretch')
 
         # show a compact per-crop table
         if per_crop_ensemble is not None and not per_crop_ensemble.empty:
             st.markdown("**Per-crop summary (top)**")
-            st.dataframe(per_crop_ensemble[['Crop','Ens_R2','Ens_MAE']].sort_values('Ens_R2', ascending=False).round(3).reset_index(drop=True), use_container_width=True)
+            st.dataframe(per_crop_ensemble[['Crop','Ens_R2','Ens_MAE']].sort_values('Ens_R2', ascending=False).round(3).reset_index(drop=True), width='stretch')
     else:
         st.info("Model evaluation metrics not available. Open the 'Model Evaluation' page for full details.")
 

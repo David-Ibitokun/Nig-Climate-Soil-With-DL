@@ -70,11 +70,11 @@ Understanding these patterns is critical for explaining crop yield variability.
 
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.plotly_chart(fig_t, use_container_width=True, config={'responsive': True})
+            st.plotly_chart(fig_t, width='stretch', config={'responsive': True})
         with col2:
-            st.plotly_chart(fig_r, use_container_width=True, config={'responsive': True})
+            st.plotly_chart(fig_r, width='stretch', config={'responsive': True})
         with col3:
-            st.plotly_chart(fig_h, use_container_width=True, config={'responsive': True})
+            st.plotly_chart(fig_h, width='stretch', config={'responsive': True})
     else:
         climate_patterns = results_dir / "seasonal_climate_patterns.png"
         if climate_patterns.exists():
@@ -163,11 +163,11 @@ Understanding these patterns is critical for explaining crop yield variability.
     
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.plotly_chart(annual_feature_by_region('PRECTOTCORR'), use_container_width=True, config={'responsive': True})
+            st.plotly_chart(annual_feature_by_region('PRECTOTCORR'), width='stretch', config={'responsive': True})
         with col2:
-            st.plotly_chart(annual_feature_by_region('T2M'), use_container_width=True, config={'responsive': True})
+            st.plotly_chart(annual_feature_by_region('T2M'), width='stretch', config={'responsive': True})
         with col3:
-            st.plotly_chart(annual_feature_by_region('RH2M'), use_container_width=True, config={'responsive': True})
+            st.plotly_chart(annual_feature_by_region('RH2M'), width='stretch', config={'responsive': True})
     else:
         # fallback to image if processed dataset not available
         annual_trends = results_dir / "climate_trends_by_region_1999_2023.png"

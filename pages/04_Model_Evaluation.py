@@ -229,8 +229,8 @@ This provides a robust estimate of performance on unseen data.
     #             color_continuous_scale="Reds",
     #             labels={'Overall_Sensitivity': 'Sensitivity Score'}
     #         )
-    #         st.plotly_chart(fig, use_container_width=True)
-    #         st.dataframe(crop_sensitivity, use_container_width=True)
+    #         st.plotly_chart(fig, width='stretch')
+    #         st.dataframe(crop_sensitivity, width='stretch')
     #     else:
     #         st.info("No crop sensitivity table available or required columns ('Crop','Overall_Sensitivity') are missing in results.")
     
@@ -253,9 +253,9 @@ This provides a robust estimate of performance on unseen data.
     #             color="Food_Security_Risk_Score",
     #             color_continuous_scale="Reds",
     #         )
-    #         st.plotly_chart(fig, use_container_width=True)
+    #         st.plotly_chart(fig, width='stretch')
 
-    #         st.dataframe(fs_sorted, use_container_width=True)
+    #         st.dataframe(fs_sorted, width='stretch')
     #     else:
     #         st.info("No food security table available or required column 'Food_Security_Risk_Score' is missing in results.")
     
