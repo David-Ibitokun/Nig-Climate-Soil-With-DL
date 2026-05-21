@@ -45,12 +45,10 @@ By understanding how climate variables during the growing season drive final cro
     
     with col2:
         st.markdown("""
-#### **Climate Variables**
+#### **Climate Variables Used**
 - Temperature (°C)
 - Rainfall (mm)
 - Humidity (%)
-- Solar radiation
-- Wind patterns
 
 #### **Data Source**
 - Climate: NASA POWER climate records (https://power.larc.nasa.gov/)
@@ -189,7 +187,7 @@ Food security risk scores range from 0 (low risk) to 1.0 (critical risk):
     
     st.markdown("---")
     
-    st.subheader("📞 Support & Questions")
+    # st.subheader("📞 Support & Questions")
     
     st.markdown("""
 ### About This Application

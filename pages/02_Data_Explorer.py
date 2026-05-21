@@ -5,12 +5,8 @@ from pathlib import Path
 from data_loader import apply_global_style, load_data
 
 
-def _get_crop_sensitivity_table(data: dict) -> pd.DataFrame:
-    crop_sensitivity = data.get("crop_sensitivity", pd.DataFrame())
-    if isinstance(crop_sensitivity, pd.DataFrame) and not crop_sensitivity.empty:
-        if {"Crop", "Overall_Sensitivity"}.issubset(crop_sensitivity.columns):
-            return crop_sensitivity
-
+@st.cache_data(show_spinner=False)
+def _load_fallback_crop_sensitivity_table() -> pd.DataFrame:
     seasonal_path = Path(__file__).resolve().parent.parent / "results" / "seasonal_climate_sensitivity_by_crop.csv"
     seasonal = pd.read_csv(seasonal_path) if seasonal_path.exists() else pd.DataFrame()
     if isinstance(seasonal, pd.DataFrame) and not seasonal.empty:
@@ -25,6 +21,15 @@ def _get_crop_sensitivity_table(data: dict) -> pd.DataFrame:
             return seasonal[["Crop", "Overall_Sensitivity"]]
 
     return pd.DataFrame()
+
+
+def _get_crop_sensitivity_table(data: dict) -> pd.DataFrame:
+    crop_sensitivity = data.get("crop_sensitivity", pd.DataFrame())
+    if isinstance(crop_sensitivity, pd.DataFrame) and not crop_sensitivity.empty:
+        if {"Crop", "Overall_Sensitivity"}.issubset(crop_sensitivity.columns):
+            return crop_sensitivity
+
+    return _load_fallback_crop_sensitivity_table()
 
 
 def render():

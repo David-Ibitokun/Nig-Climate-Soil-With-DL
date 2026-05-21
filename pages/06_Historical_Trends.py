@@ -4,6 +4,14 @@ from PIL import Image
 from data_loader import apply_global_style
 
 
+@st.cache_data(show_spinner=False)
+def _load_image(path: Path):
+    if not path.exists():
+        return None
+    with Image.open(path) as img:
+        return img.copy()
+
+
 def render():
     apply_global_style()
     
@@ -22,8 +30,8 @@ These visualizations show long-term trends and variability in agricultural produ
     st.subheader("🌾 Crop & Regional Yield Patterns Over Time")
     
     trend_image = results_dir / "historical_yield_trends.png"
-    if trend_image.exists():
-        img = Image.open(trend_image)
+    img = _load_image(trend_image)
+    if img is not None:
         st.image(img, width="stretch", caption="Historical Yield Trends (1999-2023)")
     else:
         st.warning("Historical yield trends image not found. Please run the notebook first.")

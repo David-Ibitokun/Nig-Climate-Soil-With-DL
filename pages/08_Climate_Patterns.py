@@ -8,6 +8,38 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 
+@st.cache_data(show_spinner=False)
+def _get_processed_dataset() -> pd.DataFrame:
+    data = load_data()
+    processed = data.get('processed_dataset') if isinstance(data.get('processed_dataset'), pd.DataFrame) else pd.DataFrame()
+    return processed.copy() if isinstance(processed, pd.DataFrame) else pd.DataFrame()
+
+
+@st.cache_data(show_spinner=False)
+def _monthly_mean(frame: pd.DataFrame, feature_code: str):
+    vals = []
+    months = []
+    for m in range(1, 13):
+        col = f'{feature_code}_m{m}'
+        if col in frame.columns:
+            vals.append(float(frame[col].mean()))
+        else:
+            vals.append(np.nan)
+        months.append(m)
+    return months, vals
+
+
+@st.cache_data(show_spinner=False)
+def _annual_mean_feature(frame: pd.DataFrame, feature_code: str) -> pd.DataFrame:
+    month_cols = [f"{feature_code}_m{m}" for m in range(1, 13) if f"{feature_code}_m{m}" in frame.columns]
+    if not month_cols:
+        return pd.DataFrame()
+    tmp = frame.copy()
+    tmp['__feat_mean__'] = tmp[month_cols].mean(axis=1)
+    annual = tmp.groupby('Year')['__feat_mean__'].mean().reset_index()
+    return annual.dropna()
+
+
 def render():
     apply_global_style()
     
@@ -29,25 +61,12 @@ Understanding these patterns is critical for explaining crop yield variability.
     st.subheader("📅 Seasonal Climate Dynamics")
 
     # Load processed dataset for plotting monthly seasonal cycles
-    data = load_data()
-    processed = data.get('processed_dataset') if isinstance(data.get('processed_dataset'), pd.DataFrame) else pd.DataFrame()
-
-    def monthly_mean(frame: pd.DataFrame, feature_code: str):
-        vals = []
-        months = []
-        for m in range(1, 13):
-            col = f'{feature_code}_m{m}'
-            if col in frame.columns:
-                vals.append(float(frame[col].mean()))
-            else:
-                vals.append(np.nan)
-            months.append(m)
-        return months, vals
+    processed = _get_processed_dataset()
 
     if not processed.empty:
-        months, t_vals = monthly_mean(processed, 'T2M')
-        _, r_vals = monthly_mean(processed, 'PRECTOTCORR')
-        _, h_vals = monthly_mean(processed, 'RH2M')
+        months, t_vals = _monthly_mean(processed, 'T2M')
+        _, r_vals = _monthly_mean(processed, 'PRECTOTCORR')
+        _, h_vals = _monthly_mean(processed, 'RH2M')
 
         month_names = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 
@@ -89,17 +108,7 @@ Understanding these patterns is critical for explaining crop yield variability.
     st.subheader("📈 Annual Climate Patterns Over Time")
 
     # Prefer generating the plot directly from processed dataset for higher quality
-    data = load_data()
-    processed = data.get('processed_dataset') if isinstance(data.get('processed_dataset'), pd.DataFrame) else pd.DataFrame()
-
-    def annual_mean_feature(frame: pd.DataFrame, feature_code: str) -> pd.DataFrame:
-        month_cols = [f"{feature_code}_m{m}" for m in range(1, 13) if f"{feature_code}_m{m}" in frame.columns]
-        if not month_cols:
-            return pd.DataFrame()
-        tmp = frame.copy()
-        tmp['__feat_mean__'] = tmp[month_cols].mean(axis=1)
-        annual = tmp.groupby('Year')['__feat_mean__'].mean().reset_index()
-        return annual.dropna()
+    processed = _get_processed_dataset()
 
     if not processed.empty:
         regions = sorted(processed['Region'].dropna().unique())
@@ -121,7 +130,7 @@ Understanding these patterns is critical for explaining crop yield variability.
 
             for region in regions:
                 region_df = processed[processed['Region'] == region]
-                annual_df = annual_mean_feature(region_df, feature_code)
+                annual_df = _annual_mean_feature(region_df, feature_code)
                 if annual_df.empty:
                     continue
                 fig.add_trace(

@@ -4,6 +4,14 @@ from PIL import Image
 from data_loader import apply_global_style
 
 
+@st.cache_data(show_spinner=False)
+def _load_image(path: Path):
+    if not path.exists():
+        return None
+    with Image.open(path) as img:
+        return img.copy()
+
+
 def render():
     apply_global_style()
     
@@ -21,8 +29,8 @@ Higher resilience indicates more stable yields despite climate fluctuations.
     st.subheader("🗺️ Resilience by Crop & Region Heatmap")
     
     resilience_image = results_dir / "climate_resilience_index_heatmap.png"
-    if resilience_image.exists():
-        img = Image.open(resilience_image)
+    img = _load_image(resilience_image)
+    if img is not None:
         st.image(img, width="stretch", caption="Climate Resilience Index: Green = High Resilience, Red = Low Resilience")
     else:
         st.warning("Climate resilience index image not found. Please run the notebook first.")
@@ -39,6 +47,16 @@ Higher resilience indicates more stable yields despite climate fluctuations.
     - Based on coefficient of variation (CV) in historical yields
     - CV = Standard Deviation / Mean Yield
     - Index = 1 / (1 + CV) - measures yield stability
+
+    **How this image was generated (summary):**
+    1. The processed dataset of historical yields (`data/processed_dataset.csv`) was grouped by `Crop` and `Region` to build yield time series for each cell.
+    2. For each crop-region combination we computed the coefficient of variation (CV = std / mean) of historical yields.
+    3. The resilience index was derived as `1 / (1 + CV)`, producing values in (0,1] where higher means more stable yields.
+    4. Values were clipped and optionally smoothed to avoid outliers dominating the color scale, then pivoted into a matrix (rows=crops, cols=regions).
+    5. A heatmap was created (matplotlib / seaborn) with a diverging colormap and annotations and saved to `results/climate_resilience_index_heatmap.png`.
+    6. The notebook also saves the underlying numeric CSV so results can be inspected programmatically.
+
+    This representation highlights where yields are historically more stable (green) versus more variable (red), helping prioritize resilience interventions.
     """)
     
     st.markdown("---")

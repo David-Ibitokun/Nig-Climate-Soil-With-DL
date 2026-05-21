@@ -1,0 +1,16 @@
+{
+  "region_to_id": {
+    "North-Central": 0,
+    "North-East": 1,
+    "North-West": 2,
+    "South-East": 3,
+    "South-South": 4,
+    "South-West": 5
+  },
+  "crop_to_id": {
+    "Cassava": 0,
+    "Maize": 1,
+    "Rice": 2,
+    "Yam": 3
+  }
+}

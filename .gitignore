@@ -72,11 +72,6 @@ env/
 .env
 .env.local
 
-Large model files (uncomment if needed)
-*.h5
-*.pb
-*.onnx
-
 # OS
 Thumbs.db
 .DS_Store

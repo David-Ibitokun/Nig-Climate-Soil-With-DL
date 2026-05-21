@@ -9,6 +9,13 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 ARCHITECTURE_SVG = ROOT_DIR / "TCN_MLP_Architecture.svg"
 
 
+@st.cache_data(show_spinner=False)
+def _load_architecture_svg() -> str:
+    if ARCHITECTURE_SVG.exists():
+        return ARCHITECTURE_SVG.read_text(encoding="utf-8")
+    return ""
+
+
 def render():
     apply_global_style()
     
@@ -22,8 +29,8 @@ Learn how the TCN-MLP ensemble is wired, what each branch does, and how the full
 
     st.subheader("🧭 Architecture Visualization")
 
-    if ARCHITECTURE_SVG.exists():
-        svg_markup = ARCHITECTURE_SVG.read_text(encoding="utf-8")
+    svg_markup = _load_architecture_svg()
+    if svg_markup:
         components.html(svg_markup, height=980, scrolling=True)
         st.caption("TCN-MLP architecture diagram showing the temporal branch, context branches, fusion layer, and MLP head.")
     else:

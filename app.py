@@ -24,6 +24,20 @@ def main():
     meta = data.get("metadata") or {}
     perf = meta.get("performance", {}) if isinstance(meta, dict) else {}
 
+    # Precompute evaluation summary metrics so they are available for the overview block
+    ensemble_metrics = data.get("ensemble_metrics") if isinstance(data.get("ensemble_metrics"), pd.DataFrame) else None
+    avg_r2 = None
+    avg_mae = None
+    if ensemble_metrics is not None and not ensemble_metrics.empty:
+        try:
+            avg_r2 = float(ensemble_metrics['Ensemble_R2'].mean())
+        except Exception:
+            avg_r2 = None
+        try:
+            avg_mae = float(ensemble_metrics['Ensemble_MAE'].mean())
+        except Exception:
+            avg_mae = None
+
     st.title("🌾 Enhanced Crop Yield Prediction")
     st.markdown(
         """
@@ -32,39 +46,6 @@ def main():
 Navigate through the sidebar to explore predictions, data, model architecture, evaluation metrics, and project details.
 """
     )
-
-    st.markdown("---")
-
-    # --- Model evaluation summary (compact) ---
-    st.subheader("📈 Model Evaluation Summary")
-
-    data = load_data()
-    ensemble_metrics = data.get("ensemble_metrics") if isinstance(data.get("ensemble_metrics"), pd.DataFrame) else None
-    per_crop_ensemble = data.get("per_crop_ensemble") if isinstance(data.get("per_crop_ensemble"), pd.DataFrame) else None
-
-    avg_r2 = None
-    avg_mae = None
-    if ensemble_metrics is not None and not ensemble_metrics.empty:
-        avg_r2 = ensemble_metrics['Ensemble_R2'].mean()
-        avg_mae = ensemble_metrics['Ensemble_MAE'].mean()
-
-        c1, c2 = st.columns([1, 2])
-        with c1:
-            st.metric("Avg R² (5-fold)", f"{avg_r2:.3f}")
-            st.metric("Avg MAE", f"{avg_mae:.1f} kg/ha")
-
-        with c2:
-            fig = go.Figure()
-            fig.add_trace(go.Bar(x=ensemble_metrics['Fold'], y=ensemble_metrics['Ensemble_R2'], name='R²', marker_color='#1f77b4'))
-            fig.update_layout(title='Ensemble R² by Fold', xaxis_title='Fold', yaxis_title='R²', height=260, margin=dict(t=40,b=20))
-            st.plotly_chart(fig, width='stretch')
-
-        # show a compact per-crop table
-        if per_crop_ensemble is not None and not per_crop_ensemble.empty:
-            st.markdown("**Per-crop summary (top)**")
-            st.dataframe(per_crop_ensemble[['Crop','Ens_R2','Ens_MAE']].sort_values('Ens_R2', ascending=False).round(3).reset_index(drop=True), width='stretch')
-    else:
-        st.info("Model evaluation metrics not available. Open the 'Model Evaluation' page for full details.")
 
     st.markdown("---")
 
@@ -97,7 +78,7 @@ Navigate through the sidebar to explore predictions, data, model architecture, e
             st.metric("Avg MAE", "N/A")
 
     with col3:
-        st.metric("Crops", "4", "Maize, Rice, Cassava, Yam")
+        st.metric("Crops", "4", help="Maize, Rice, Cassava, Yam")
 
     with col4:
         # Prefer metadata value, otherwise infer from processed_dataset column patterns like 'T2M_m1'..'T2M_m12'
@@ -131,6 +112,23 @@ Navigate through the sidebar to explore predictions, data, model architecture, e
             f"{n_temporal}",
             help="9 climate parameters used in training: " + ", ".join(CLIMATE_PARAMETER_CODES),
         )
+
+    st.markdown("---")
+
+    # --- Project overview (replaces Model Evaluation Summary) ---
+    st.subheader("📚 Project Overview")
+    st.markdown(
+        """
+This project predicts crop yields from 12-month climate sequences using a TCN–MLP ensemble trained with 5-fold cross-validation.
+
+- **Objective:** Provide actionable yield predictions (kg/ha) for multiple crops and regions, with uncertainty estimates from an ensemble of fold models.
+- **Data:** Processed historical climate sequences and observed yields are used to train the model; the processed dataset is available under `data/processed_dataset.csv`.
+- **Model:** A hybrid Temporal Convolutional Network (TCN) processes monthly climate sequences and is combined with MLP branches for region/crop/year context. The final system uses an ensemble of 5 fold models to produce a mean prediction and an uncertainty interval.
+- **Outputs:** The app exposes prediction interfaces, data exploration views, model architecture descriptions, and results visualizations (metrics, heatmaps, and diagnostic CSVs in `results/`).
+
+Use the sidebar to navigate to **Make Prediction**, **Data Explorer**, **Model Architecture**, and **Model Evaluation** pages for deeper analysis and downloadable artifacts.
+        """
+    )
 
     st.markdown("---")
 

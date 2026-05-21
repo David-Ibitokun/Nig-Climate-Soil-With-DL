@@ -4,6 +4,14 @@ from PIL import Image
 from data_loader import apply_global_style
 
 
+@st.cache_data(show_spinner=False)
+def _load_image(path: Path):
+    if not path.exists():
+        return None
+    with Image.open(path) as img:
+        return img.copy()
+
+
 def render():
     apply_global_style()
     
@@ -22,8 +30,8 @@ Visualizes fold-wise results and per-crop model accuracy.
     st.subheader("🎯 Ensemble Performance Dashboard")
     
     dashboard_image = results_dir / "ensemble_dashboard_highres.png"
-    if dashboard_image.exists():
-        img = Image.open(dashboard_image)
+    img = _load_image(dashboard_image)
+    if img is not None:
         st.image(img, width="stretch", caption="Fold-wise Ensemble R² | Per-Crop Results | Actual vs Predicted | Regional Uncertainty")
     else:
         st.warning("Ensemble dashboard image not found. Please run the notebook first.")
