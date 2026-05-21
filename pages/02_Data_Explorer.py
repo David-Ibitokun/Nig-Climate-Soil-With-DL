@@ -1,7 +1,30 @@
 import streamlit as st
 import plotly.express as px
 import pandas as pd
+from pathlib import Path
 from data_loader import apply_global_style, load_data
+
+
+def _get_crop_sensitivity_table(data: dict) -> pd.DataFrame:
+    crop_sensitivity = data.get("crop_sensitivity", pd.DataFrame())
+    if isinstance(crop_sensitivity, pd.DataFrame) and not crop_sensitivity.empty:
+        if {"Crop", "Overall_Sensitivity"}.issubset(crop_sensitivity.columns):
+            return crop_sensitivity
+
+    seasonal_path = Path(__file__).resolve().parent.parent / "results" / "seasonal_climate_sensitivity_by_crop.csv"
+    seasonal = pd.read_csv(seasonal_path) if seasonal_path.exists() else pd.DataFrame()
+    if isinstance(seasonal, pd.DataFrame) and not seasonal.empty:
+        seasonal = seasonal.copy()
+        if "Crop" not in seasonal.columns:
+            seasonal = seasonal.rename(columns={seasonal.columns[0]: "Crop"})
+        numeric_cols = [col for col in seasonal.columns if col != "Crop"]
+        if numeric_cols:
+            for col in numeric_cols:
+                seasonal[col] = pd.to_numeric(seasonal[col], errors="coerce")
+            seasonal["Overall_Sensitivity"] = seasonal[numeric_cols].abs().mean(axis=1, skipna=True)
+            return seasonal[["Crop", "Overall_Sensitivity"]]
+
+    return pd.DataFrame()
 
 
 def render():
@@ -86,22 +109,61 @@ Key climate variables used in the model:
     with tab3:
         st.subheader("🌾 Crop Yield Data")
 
-        if "crop_sensitivity" in data:
-            crop_sensitivity = data['crop_sensitivity']
-            if isinstance(crop_sensitivity, pd.DataFrame) and not crop_sensitivity.empty and {'Crop', 'Overall_Sensitivity'}.issubset(crop_sensitivity.columns):
-                st.dataframe(crop_sensitivity, width='stretch')
+        processed = data.get("processed_dataset", pd.DataFrame())
+        if isinstance(processed, pd.DataFrame) and not processed.empty:
+            yield_col = None
+            for candidate in ("Yield_kg_per_ha", "Yield", "yield"):
+                if candidate in processed.columns:
+                    yield_col = candidate
+                    break
+
+            if yield_col is not None and {"Crop", "Region"}.issubset(processed.columns):
+                yield_summary = (
+                    processed[["Crop", "Region", yield_col]]
+                    .dropna(subset=[yield_col])
+                    .groupby(["Crop", "Region"], as_index=False)
+                    .agg(
+                        Mean_Yield=(yield_col, "mean"),
+                        Median_Yield=(yield_col, "median"),
+                        Sample_Count=(yield_col, "count"),
+                    )
+                )
+
+                st.caption("Observed yield data from the processed dataset.")
+                st.dataframe(yield_summary, width='stretch', hide_index=True)
 
                 fig = px.bar(
-                    crop_sensitivity,
-                    x='Crop',
-                    y='Overall_Sensitivity',
-                    title="Crop Climate Sensitivity",
-                    color='Overall_Sensitivity',
-                    color_continuous_scale="Reds",
+                    yield_summary,
+                    x="Crop",
+                    y="Mean_Yield",
+                    color="Region",
+                    barmode="group",
+                    title="Average Yield by Crop and Region",
+                    labels={"Mean_Yield": "Average Yield (kg/ha)"},
                 )
                 st.plotly_chart(fig, width='stretch')
             else:
-                st.info("No crop sensitivity table available or required columns ('Crop','Overall_Sensitivity') are missing.")
+                st.info("Processed dataset is available, but no yield column was found.")
+
+        else:
+            st.info("No yield observations were found in the loaded results.")
+
+        crop_sensitivity = _get_crop_sensitivity_table(data)
+        if not crop_sensitivity.empty:
+            st.markdown("#### Crop Climate Sensitivity")
+            st.dataframe(crop_sensitivity, width='stretch', hide_index=True)
+
+            fig = px.bar(
+                crop_sensitivity,
+                x='Crop',
+                y='Overall_Sensitivity',
+                title="Crop Climate Sensitivity",
+                color='Overall_Sensitivity',
+                color_continuous_scale="Reds",
+            )
+            st.plotly_chart(fig, width='stretch')
+        else:
+            st.info("No crop sensitivity data could be resolved from the loaded results.")
     
     with tab4:
         st.subheader("🔗 Climate-Yield Relationships")

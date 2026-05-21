@@ -110,6 +110,39 @@ def _read_json(path: Path) -> Dict[str, Any]:
         return {}
 
 
+def _build_crop_sensitivity_table() -> pd.DataFrame:
+    """
+    Return a crop sensitivity table with a stable Crop / Overall_Sensitivity shape.
+
+    Prefer a dedicated crop sensitivity export when available, but fall back to the
+    seasonal crop summary shipped with the results folder and derive a single overall
+    sensitivity score from its seasonal columns.
+    """
+
+    dedicated = _read_csv(_RESULTS_DIR / "Crop_Sensitivity_Analysis.csv")
+    if isinstance(dedicated, pd.DataFrame) and not dedicated.empty and {"Crop", "Overall_Sensitivity"}.issubset(dedicated.columns):
+        return dedicated
+
+    seasonal = _read_csv(_RESULTS_DIR / "seasonal_climate_sensitivity_by_crop.csv")
+    if isinstance(seasonal, pd.DataFrame) and not seasonal.empty:
+        seasonal = seasonal.copy()
+        if "Crop" not in seasonal.columns:
+            first_column = seasonal.columns[0]
+            seasonal = seasonal.rename(columns={first_column: "Crop"})
+
+        if "Crop" not in seasonal.columns:
+            return pd.DataFrame()
+
+        numeric_cols = [col for col in seasonal.columns if col != "Crop"]
+        for col in numeric_cols:
+            seasonal[col] = pd.to_numeric(seasonal[col], errors="coerce")
+
+        seasonal["Overall_Sensitivity"] = seasonal[numeric_cols].abs().mean(axis=1, skipna=True)
+        return seasonal[["Crop", "Overall_Sensitivity"]]
+
+    return pd.DataFrame()
+
+
 @st.cache_data(show_spinner=False)
 def load_data() -> Dict[str, Any]:
     """
@@ -123,7 +156,7 @@ def load_data() -> Dict[str, Any]:
 
     data["strategies"] = _read_csv(_RESULTS_DIR / "Adaptive_Strategies_Recommendations.csv")
     data["food_security"] = _read_csv(_RESULTS_DIR / "Food_Security_Assessment.csv")
-    data["crop_sensitivity"] = _read_csv(_RESULTS_DIR / "Crop_Sensitivity_Analysis.csv")
+    data["crop_sensitivity"] = _build_crop_sensitivity_table()
 
     # Some pages refer to this as "resilience" (index by crop-region).
     resilience_path = _RESULTS_DIR / "Resilience_Index_by_CropRegion.csv"
