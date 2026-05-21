@@ -1,10 +1,23 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
+import os
+from pathlib import Path
 from data_loader import apply_global_style, load_data
 
 # Small constant used in log-transform inversion
 EPSILON = 1e-6
+
+
+def get_os_identifier() -> str:
+    return "windows" if os.name == "nt" else "linux"
+
+
+def normalize_model_path(path_value: str) -> str:
+    normalized = str(path_value).strip().replace("../", "").replace("..\\", "").replace("\\", "/")
+    if get_os_identifier() == "windows":
+        return normalized.replace("/", "\\")
+    return normalized
 
 
 def render():
@@ -247,29 +260,26 @@ The current page is still a coarse scenario interface. The real network consumes
         model_paths = []
         try:
             inv = pd.read_csv('results/tcn_mlp_model_inventory.csv')
-            import os
             for p in inv['Path'].dropna().tolist():
-                cleaned = p.replace('..' + os.sep, '').replace('../', '')
-                model_paths.append(cleaned)
+                model_paths.append(normalize_model_path(p))
         except Exception:
-            import os
-            models_dir = 'models'
-            if os.path.isdir(models_dir):
-                for f in os.listdir(models_dir):
-                    if f.lower().endswith('.keras') or f.lower().endswith('.h5'):
-                        model_paths.append(os.path.join(models_dir, f))
+            models_dir = Path('models')
+            if models_dir.is_dir():
+                for f in models_dir.iterdir():
+                    if f.suffix.lower() in {'.keras', '.h5'}:
+                        model_paths.append(str(f))
 
         loaded_models = []
         for mp in model_paths:
             try:
-                mpath = mp if mp.startswith('models') or mp.startswith('/') else mp
-                model = keras.models.load_model(mpath, compile=False)
+                candidate_path = Path(mp)
+                if not candidate_path.is_absolute():
+                    candidate_path = Path.cwd() / candidate_path
+                model = keras.models.load_model(str(candidate_path), compile=False)
                 loaded_models.append(model)
             except Exception:
                 try:
-                    import os
-                    mpath2 = os.path.join(os.getcwd(), mp)
-                    model = keras.models.load_model(mpath2, compile=False)
+                    model = keras.models.load_model(str(Path.cwd() / Path(mp)), compile=False)
                     loaded_models.append(model)
                 except Exception:
                     continue

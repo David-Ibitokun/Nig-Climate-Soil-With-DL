@@ -53,8 +53,8 @@ By understanding how climate variables during the growing season drive final cro
 - Wind patterns
 
 #### **Data Source**
-- Climate: Global reanalysis datasets
-- Yield: Nigerian agricultural statistics
+- Climate: NASA POWER climate records (https://power.larc.nasa.gov/)
+- Yield: HarvestStat Africa raw crop production figures (https://github.com/HarvestStat/HarvestStat-Africa)
         """)
     
     st.markdown("---")
@@ -160,8 +160,8 @@ Learn about the project scope, methodology, and how to interpret results.
 
 ### Data Sources
 
-- Climate data: Global atmospheric reanalysis
-- Agricultural statistics: National government databases
+- Climate data: NASA POWER climate records (https://power.larc.nasa.gov/)
+- Agricultural statistics: HarvestStat Africa raw crop production figures (https://github.com/HarvestStat/HarvestStat-Africa)
 - Regional classifications: Geopolitical zone definitions
         """)
     

@@ -70,7 +70,7 @@ These visualizations show long-term trends and variability in agricultural produ
     - **Time Period**: 1999-2023 (25 years of historical data)
     - **Crops Analyzed**: Maize, Rice, Cassava, Yam
     - **Regions Covered**: All 6 geopolitical zones in Nigeria
-    - **Data Source**: NASRDA agricultural census + MERRA-2 climate data
+    - **Data Source**: NASA POWER climate records (https://power.larc.nasa.gov/) + HarvestStat Africa raw crop production figures (https://github.com/HarvestStat/HarvestStat-Africa)
     - **Metric**: Average yield (kg/ha) per crop-region combination per year
     """)
 
