@@ -162,8 +162,11 @@ Select your inputs and the model will provide yield predictions with confidence 
     st.markdown("---")
     
     # Advanced: build monthly sequences
-    st.subheader("🧾 Monthly Climate Sequence (Advanced)")
+    st.subheader("🧾 Monthly Climate Sequence")
     with st.expander("📚 Climate Parameter Reference", expanded=False):
+        st.caption(
+            "Parameter_Name is the human-readable description of each climate variable, while Parameter_Code is the short code used in the dataset and model inputs."
+        )
         st.code(
             """Category,       Parameter_Code, Parameter_Name,         Unit
 temperature,    T2M,            Mean temperature at 2m, °C
@@ -175,6 +178,21 @@ humidity,       RH2M,           Relative humidity at 2m,%
 humidity,       QV2M,           Specific humidity at 2m,g/kg
 humidity,       T2MDEW,         Dew point temperature at 2m,°C
 humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
+        )
+        st.markdown(
+            """
+**Parameter_Name explanations**
+
+- **Mean temperature at 2m**: the average air temperature measured near the ground surface.
+- **Max temperature at 2m**: the hottest air temperature near the ground surface for the month.
+- **Min temperature at 2m**: the coldest air temperature near the ground surface for the month.
+- **Land surface temperature**: the temperature of the land itself, not the air above it.
+- **Bias-corrected total precipitation**: the monthly rainfall amount adjusted to reduce measurement bias.
+- **Relative humidity at 2m**: how much moisture is in the air near the ground, compared with the maximum possible.
+- **Specific humidity**: the actual amount of water vapor in the air.
+- **Dew point temperature at 2m**: the temperature at which air near the ground becomes saturated and condensation starts.
+- **Wet bulb temperature at 2m**: the temperature reached when air is cooled by evaporation; it reflects heat and moisture together.
+            """
         )
 
     seq_mode = st.radio(
@@ -249,8 +267,32 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
 
     st.markdown("---")
 
+    # Provide a downloadable CSV template for users
+    template_df = pd.DataFrame(np.zeros((12, len(CLIMATE_FEATURES)), dtype=np.float32), columns=CLIMATE_FEATURES)
+    csv_template = template_df.to_csv(index=False)
+    
+    st.info("You can edit the table above or upload a CSV. Use the template if unsure of format.")
+    
+    # Responsive button layout
+    btn_col1, btn_col2 = st.columns(2, gap="small")
+    with btn_col1:
+        st.download_button(
+            label="Download CSV Template",
+            data=csv_template,
+            file_name="climate_sequence_template.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
+    
+    with btn_col2:
+        generate = st.button(
+            "🎯 Generate Prediction",
+            type="primary",
+            use_container_width=True
+        )
+
     # Prediction (real path)
-    if st.button("🚀 Generate Prediction", type="primary", width='stretch'):
+    if generate:
         st.info("Running cached artifact loading, ensemble prediction, and denormalization.")
 
         try:
@@ -398,12 +440,61 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
 
             half_width = (y_upper - y_lower) / 2.0
             uncertainty_pct = (half_width / max(y_pred, EPSILON)) * 100.0
+            
+            # Convert uncertainty to confidence (Model Agreement %)
+            model_confidence = max(0.0, min(100.0, 100.0 - uncertainty_pct))
 
             st.subheader("📊 Prediction Results")
-            c1, c2, c3 = st.columns(3)
-            c1.metric("Predicted Yield", f"{y_pred:.0f} kg/ha")
-            c2.metric("Lower Bound (95%)", f"{y_lower:.0f} kg/ha")
-            c3.metric("Upper Bound (95%)", f"{y_upper:.0f} kg/ha")
+
+            # 1. Expected Range (PRIMARY - most actionable)
+            st.metric(
+                "🎯 Expected Yield Range (95% Confidence Interval)",
+                f"{y_lower:,.0f} – {y_upper:,.0f} kg/ha",
+                delta=f"±{half_width:,.0f} kg/ha",
+                delta_color="normal"
+            )
+
+            # 2. Model Confidence (dynamic, intuitive)
+            if model_confidence >= 90:
+                confidence_label = "High Confidence 🟢"
+                confidence_interpretation = "Models strongly agree — high reliability"
+                delta_color = "normal"
+            elif model_confidence >= 75:
+                confidence_label = "Good Confidence 🟡"
+                confidence_interpretation = "Good agreement — suitable for planning"
+                delta_color = "normal"
+            elif model_confidence >= 60:
+                confidence_label = "Moderate Confidence 🟠"
+                confidence_interpretation = "Moderate disagreement — use with caution"
+                delta_color = "off"
+            else:
+                confidence_label = "Low Confidence 🔴"
+                confidence_interpretation = "High disagreement — seek additional data"
+                delta_color = "inverse"
+
+            st.metric(
+                "🤝 Model Ensemble Confidence",
+                f"{model_confidence:.1f}%",
+                delta=confidence_label,
+                delta_color=delta_color,
+                help="Reflects how much the 5 ensemble models agree with each other. Higher % = stronger consensus."
+            )
+
+            # 3. Point Estimate (secondary detail)
+            st.metric(
+                "📍 Best Single Estimate",
+                f"{y_pred:,.0f} kg/ha",
+                delta=f"{uncertainty_pct:.1f}% spread",
+                delta_color="inverse" if uncertainty_pct > 25 else "off",
+                help="The ensemble mean prediction; use the range above for planning"
+            )
+
+            # 4. Interpretive uncertainty band
+            st.metric(
+                "📈 Model Agreement",
+                confidence_interpretation,
+                help=f"Model agreement level based on {uncertainty_pct:.1f}% relative spread"
+            )
 
             fig = go.Figure()
             fig.add_trace(go.Bar(x=["Yield"], y=[y_pred], name="Point Estimate", marker_color="#2E86AB"))
@@ -425,17 +516,16 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
             )
             st.plotly_chart(fig, width="stretch")
 
-            st.markdown(f"**Uncertainty (±, 95% CI) — half-width:** {uncertainty_pct:.1f}%")
-
+            # Visual interpretation of confidence level
             if uncertainty_pct < 10.0:
                 uncertainty_band = "Low"
-                st.success(f"Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — models largely agree")
+                st.success(f"✓ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — models largely agree")
             elif uncertainty_pct < 25.0:
                 uncertainty_band = "Medium"
-                st.warning(f"Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — moderate disagreement between models")
+                st.info(f"ℹ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — moderate disagreement between models")
             else:
                 uncertainty_band = "High"
-                st.error(f"Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — high disagreement; interpret with caution")
+                st.warning(f"⚠ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — high disagreement; interpret with caution")
 
             st.markdown("---")
             st.subheader("📈 Prediction Details")
@@ -449,7 +539,28 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
         **Uncertainty band**: {uncertainty_band}
 
         The prediction uses cached training artifacts when available, falls back only when necessary, runs the ensemble once per model, then denormalizes the result back to yield units.
+
+        ---
+
+        🔎 **Components Explained**
+
+        - **95% CI (Confidence Interval)**: A range where we're 95% confident the true yield value lies.
+        - **Half-width**: Half the distance between the upper and lower bounds of that range.
+        - **± (Plus-Minus)**: The uncertainty extends in both directions from the point estimate.
+        - **Percentage**: Expresses the half-width relative to the predicted yield (half-width ÷ predicted yield × 100%).
         """
+            )
+
+            st.markdown(
+                """
+**Uncertainty Bands**
+
+| Band | Threshold | Meaning |
+|---|---:|---|
+| 🟢 Low | < 10% | Ensemble models largely agree — high confidence |
+| 🟡 Medium | 10–25% | Moderate disagreement — use with some caution |
+| 🔴 High | ≥ 25% | High disagreement — interpret carefully |
+                """
             )
 
         except Exception:
