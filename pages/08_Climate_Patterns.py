@@ -170,10 +170,10 @@ Understanding these patterns is critical for explaining crop yield variability.
         col1, col2, col3 = st.columns(3)
         with col1:
             st.plotly_chart(annual_feature_by_region('PRECTOTCORR'), width='stretch', config={'responsive': True})
-        with col2:
-            st.plotly_chart(annual_feature_by_region('T2M'), width='stretch', config={'responsive': True})
-        with col3:
-            st.plotly_chart(annual_feature_by_region('RH2M'), width='stretch', config={'responsive': True})
+            with col2:
+                st.plotly_chart(annual_feature_by_region('T2M'), width='stretch', config={'responsive': True})
+            with col3:
+                st.plotly_chart(annual_feature_by_region('RH2M'), width='stretch', config={'responsive': True})
     else:
         # fallback to image if processed dataset not available
         annual_trends = results_dir / "climate_trends_by_region_1999_2023.png"
