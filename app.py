@@ -18,6 +18,13 @@ CLIMATE_PARAMETER_CODES = [
 
 
 def main():
+    # Use a wide layout for dashboards and charts
+    try:
+        st.set_page_config(page_title="Crop Yield Prediction", layout="wide", initial_sidebar_state="auto")
+    except Exception:
+        # set_page_config can only be called once at runtime; ignore if already set
+        pass
+
     apply_global_style()
 
     data = load_data()
@@ -39,6 +46,16 @@ def main():
             avg_mae = None
 
     st.title("🌾 Enhanced Crop Yield Prediction")
+    # Sidebar quick info
+    with st.sidebar:
+        st.markdown("""
+        ### App quick links
+        - Use the left page menu to navigate
+        - `Make Prediction` to run forecasts
+        - `Model Evaluation` to view metrics
+        """)
+        st.markdown("---")
+
     st.markdown(
         """
 **Predicting crop yield from climate sequences** using a TCN–MLP Ensemble architecture.

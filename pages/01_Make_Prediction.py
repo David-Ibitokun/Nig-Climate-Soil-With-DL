@@ -447,14 +447,14 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
             data=csv_template,
             file_name="climate_sequence_template.csv",
             mime="text/csv",
-            use_container_width=True
+            width='stretch'
         )
     
     with btn_col2:
         generate = st.button(
             "🎯 Generate Prediction",
             type="primary",
-            use_container_width=True
+            width='content'
         )
 
     # Prediction (real path)
@@ -752,7 +752,7 @@ For causal evidence you'd need randomized interventions or causal-inference meth
 
                 st.dataframe(
                     driver_display[["Rank", "Feature", "Parameter", "User_Mean", "Baseline_Mean", "User_vs_Baseline_Delta", "Yield_Impact_kg_ha", "Interpretation"]],
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True,
                 )
 
@@ -800,7 +800,7 @@ For causal evidence you'd need randomized interventions or causal-inference meth
                     margin=dict(l=140, r=20, t=60, b=20),
                     xaxis=dict(zeroline=True, zerolinecolor="#6b7280"),
                 )
-                st.plotly_chart(driver_fig, use_container_width=True)
+                st.plotly_chart(driver_fig, width='stretch')
 
             # Visual interpretation of confidence level
             if uncertainty_pct < 10.0:
