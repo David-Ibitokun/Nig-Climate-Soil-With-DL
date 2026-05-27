@@ -134,6 +134,23 @@ Use the sidebar to navigate to **Make Prediction**, **Data Explorer**, **Model A
 
     # Quick start guide
     st.subheader("🚀 Quick Start")
+
+    # st.markdown("Use these shortcuts to jump straight into the most common tasks.")
+    # shortcut_col1, shortcut_col2 = st.columns(2)
+
+    # with shortcut_col1:
+    #     st.page_link(
+    #         "pages/01_Make_Prediction.py",
+    #         label="Open Prediction",
+    #         icon="🎯",
+    #     )
+
+    # with shortcut_col2:
+    #     st.page_link(
+    #         "pages/15_How_To_Use.py",
+    #         label="How to Use",
+    #         icon="📘",
+    #     )
     
     col1, col2, col3 = st.columns(3)
     

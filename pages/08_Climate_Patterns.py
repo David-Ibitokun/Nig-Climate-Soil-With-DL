@@ -50,9 +50,6 @@ Analysis of Nigeria's seasonal climate patterns including temperature, rainfall,
 Understanding these patterns is critical for explaining crop yield variability.
     """)
 
-    st.markdown("""
-**Chapter 4 — Results:** Detailed evaluation, SHAP summaries and scenario projection maps that use these climate patterns are available at `notes/CHAPTER_4_TCN-MLP_Results_and_Discussion.md`.
-""")
     
     results_dir = Path(__file__).parent.parent / "results"
     
