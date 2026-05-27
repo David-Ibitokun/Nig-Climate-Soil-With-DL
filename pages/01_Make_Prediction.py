@@ -22,6 +22,50 @@ YEAR_SCALER_PATH = MODEL_DIR / "year_scaler.pkl"
 CROP_STATS_PATH = MODEL_DIR / "crop_yield_stats.pkl"
 LABEL_MAPPINGS_PATH = MODEL_DIR / "label_mappings.json"
 
+CLIMATE_FEATURE_LABELS = {
+    "T2M": "Mean temperature at 2m",
+    "T2M_MAX": "Max temperature at 2m",
+    "T2M_MIN": "Min temperature at 2m",
+    "TS": "Land surface temperature",
+    "T2MDEW": "Dew point temperature at 2m",
+    "T2MWET": "Wet bulb temperature at 2m",
+    "PRECTOTCORR": "Bias-corrected total precipitation",
+    "RH2M": "Relative humidity at 2m",
+    "QV2M": "Specific humidity at 2m",
+}
+
+CLIMATE_FEATURES = [
+    "T2M",
+    "T2M_MAX",
+    "T2M_MIN",
+    "TS",
+    "T2MDEW",
+    "T2MWET",
+    "PRECTOTCORR",
+    "RH2M",
+    "QV2M",
+]
+
+FEATURE_EXPLANATIONS = {
+    "PRECTOTCORR": "Precipitation supplies water. More rain generally increases yield up to an optimal range; too little reduces yield, too much can harm crops via flooding or leaching.",
+    "T2M": "Mean air temperature affects development rate; deviations from crop-optimal ranges (too hot or too cold) reduce yields via stress or slower growth.",
+    "T2M_MAX": "High daytime maxima can cause heat stress, reduce grain filling and pollination success, lowering yields.",
+    "T2M_MIN": "Low night temperatures can increase respiration losses or cause cold stress; extremes reduce yield.",
+    "TS": "Land surface temperature reflects canopy and soil heating; extreme values can indicate stress that reduces yield.",
+    "T2MDEW": "Dew point indicates air moisture; low dew points mean drier air and higher evapotranspiration, which can reduce yields under water stress.",
+    "T2MWET": "Wet-bulb temperature captures combined heat and humidity; high wet-bulb increases heat stress severity under humid conditions.",
+    "RH2M": "Relative humidity influences evapotranspiration and disease risk; low RH increases water loss, high RH can favor disease—both affect yield depending on context.",
+    "QV2M": "Specific humidity measures absolute moisture content; low specific humidity usually signals drier air and greater water stress on plants.",
+}
+
+
+def get_feature_explanation(feature: str, direction: str) -> str:
+    base = FEATURE_EXPLANATIONS.get(feature, "A climate feature affecting crop growth.")
+    if pd.isna(direction):
+        return base
+    direction_text = "increases" if direction.lower().startswith("p") or direction.lower() == "positive" else "decreases"
+    return f"{base} In this prediction, neutralizing this feature {direction_text} predicted yield."
+
 
 def get_month_labels() -> list[str]:
     return [f"Month {month}" for month in range(1, 13)]
@@ -110,6 +154,131 @@ def build_year_features_arr(years: np.ndarray) -> np.ndarray:
     y_sin = np.sin(2.0 * np.pi * y_norm).astype(np.float32)
     y_cos = np.cos(2.0 * np.pi * y_norm).astype(np.float32)
     return np.column_stack([y_norm, y_sin, y_cos]).astype(np.float32)
+
+
+def predict_ensemble_yield(
+    models: list,
+    X_input: np.ndarray,
+    region_id: int,
+    crop_id: int,
+    year_input: np.ndarray,
+    crop_mean: float,
+    crop_std: float,
+) -> tuple[float, float, float, float, float]:
+    import tensorflow as tf
+
+    X_tensor = tf.convert_to_tensor(X_input)
+    r_tensor = tf.convert_to_tensor(np.array([region_id], dtype=np.int32))
+    c_tensor = tf.convert_to_tensor(np.array([crop_id], dtype=np.int32))
+    yr_tensor = tf.convert_to_tensor(year_input)
+
+    preds_norm = []
+    for model in models:
+        try:
+            outputs = model([X_tensor, r_tensor, c_tensor, yr_tensor], training=False)
+            preds_norm.append(np.asarray(outputs).reshape(-1))
+        except Exception:
+            continue
+
+    if not preds_norm:
+        raise RuntimeError("All models failed during prediction.")
+
+    preds_array = np.stack(preds_norm, axis=1)
+    mean_norm = preds_array.mean(axis=1).ravel()[0]
+    std_norm = preds_array.std(axis=1, ddof=1).ravel()[0] if preds_array.shape[1] > 1 else 0.0
+
+    y_log_pred = mean_norm * crop_std + crop_mean
+    y_log_lower = (mean_norm - 1.96 * std_norm) * crop_std + crop_mean
+    y_log_upper = (mean_norm + 1.96 * std_norm) * crop_std + crop_mean
+
+    y_pred = max(np.exp(y_log_pred) - EPSILON, 0.0)
+    y_lower = max(np.exp(y_log_lower) - EPSILON, 0.0)
+    y_upper = max(np.exp(y_log_upper) - EPSILON, 0.0)
+
+    return y_pred, y_lower, y_upper, mean_norm, std_norm
+
+
+def build_global_climatology_sequence(df: pd.DataFrame) -> np.ndarray:
+    seq = np.zeros((1, 12, len(CLIMATE_FEATURES)), dtype=np.float32)
+    if df.empty:
+        return seq
+
+    for feature_index, feature_name in enumerate(CLIMATE_FEATURES):
+        for month in range(1, 13):
+            column_name = f"{feature_name}_m{month}"
+            if column_name in df.columns:
+                seq[0, month - 1, feature_index] = float(df[column_name].median())
+
+    return seq
+
+
+def build_feature_sensitivity_summary(
+    models: list,
+    X_input: np.ndarray,
+    baseline_scaled_sequence: np.ndarray,
+    baseline_raw_sequence: np.ndarray,
+    region_id: int,
+    crop_id: int,
+    year_input: np.ndarray,
+    crop_mean: float,
+    crop_std: float,
+    user_sequence: np.ndarray,
+) -> pd.DataFrame:
+    base_yield, _, _, _, _ = predict_ensemble_yield(
+        models=models,
+        X_input=X_input,
+        region_id=region_id,
+        crop_id=crop_id,
+        year_input=year_input,
+        crop_mean=crop_mean,
+        crop_std=crop_std,
+    )
+
+    rows = []
+    for feature_index, feature_name in enumerate(CLIMATE_FEATURES):
+        perturbed_input = X_input.copy()
+        # use the scaled baseline values for model input
+        perturbed_input[0, :, feature_index] = baseline_scaled_sequence[0, :, feature_index]
+
+        perturbed_yield, _, _, _, _ = predict_ensemble_yield(
+            models=models,
+            X_input=perturbed_input,
+            region_id=region_id,
+            crop_id=crop_id,
+            year_input=year_input,
+            crop_mean=crop_mean,
+            crop_std=crop_std,
+        )
+
+        impact = float(base_yield - perturbed_yield)
+        absolute_impact = abs(impact)
+        # user_sequence is in raw units; baseline_raw_sequence is also raw units
+        user_mean = float(np.mean(user_sequence[0, :, feature_index]))
+        baseline_mean = float(np.mean(baseline_raw_sequence[0, :, feature_index]))
+
+        rows.append(
+            {
+                "Feature": feature_name,
+                "Parameter": CLIMATE_FEATURE_LABELS.get(feature_name, feature_name),
+                "User_Mean": user_mean,
+                "Baseline_Mean": baseline_mean,
+                "User_vs_Baseline_Delta": user_mean - baseline_mean,
+                "Yield_Impact_kg_ha": impact,
+                "Abs_Impact_kg_ha": absolute_impact,
+                "Direction": "Positive" if impact >= 0 else "Negative",
+            }
+        )
+
+    summary_df = pd.DataFrame(rows)
+    if summary_df.empty:
+        return summary_df
+
+    summary_df = summary_df.sort_values(
+        by=["Abs_Impact_kg_ha", "Yield_Impact_kg_ha"],
+        ascending=False,
+    ).reset_index(drop=True)
+    summary_df.insert(0, "Rank", np.arange(1, len(summary_df) + 1))
+    return summary_df
 
 
 def render():
@@ -202,10 +371,6 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
         horizontal=True,
     )
 
-    CLIMATE_FEATURES = [
-        'T2M', 'T2M_MAX', 'T2M_MIN', 'TS', 'T2MDEW', 'T2MWET', 'PRECTOTCORR', 'RH2M', 'QV2M'
-    ]
-
     def build_default_sequence(df: pd.DataFrame, region: str, crop: str) -> np.ndarray:
         seq = np.zeros((1, 12, len(CLIMATE_FEATURES)), dtype=np.float32)
         if df.empty:
@@ -226,6 +391,7 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
         return seq
 
     X_seq = build_default_sequence(processed_dataset, region, crop)
+    baseline_seq = build_global_climatology_sequence(processed_dataset)
 
     if seq_mode == "Edit Table":
         default_df = pd.DataFrame(X_seq[0], columns=CLIMATE_FEATURES, index=get_month_labels())
@@ -337,8 +503,10 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
 
         if x_scaler is not None:
             X_in = x_scaler.transform(X_seq.reshape(-1, len(CLIMATE_FEATURES))).reshape(X_seq.shape).astype(np.float32)
+            baseline_in = x_scaler.transform(baseline_seq.reshape(-1, len(CLIMATE_FEATURES))).reshape(baseline_seq.shape).astype(np.float32)
         else:
             X_in = X_seq.astype(np.float32)
+            baseline_in = baseline_seq.astype(np.float32)
 
         yr_in = build_year_features_arr(np.array([year], dtype=np.float32))
         if year_scaler is not None:
@@ -515,6 +683,124 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
                 height=420,
             )
             st.plotly_chart(fig, width="stretch")
+
+            driver_summary = build_feature_sensitivity_summary(
+                models=loaded_models,
+                X_input=X_in,
+                baseline_scaled_sequence=baseline_in,
+                baseline_raw_sequence=baseline_seq,
+                region_id=r_id,
+                crop_id=c_id,
+                year_input=yr_in,
+                crop_mean=crop_mean,
+                crop_std=crop_std,
+                user_sequence=X_seq,
+            )
+            if not driver_summary.empty:
+                st.subheader("🔎 Drivers Behind This Prediction")
+                st.caption(
+                    "This is a fast what-if sensitivity analysis: each feature is neutralized to the climatology baseline one at a time, then the model is re-evaluated to estimate its yield impact."
+                )
+
+                with st.expander("🛈 Explainability guide — what each column means", expanded=False):
+                    st.markdown(
+                        """
+- **Baseline_Mean**: The climatology value for that feature (median across the processed dataset months), shown in raw units (e.g., mm/day, °C). This is the reference we use when "neutralizing" a feature.
+- **Baseline (model input)**: The same climatology values but scaled to the model's feature space; used internally when re-evaluating the model.
+- **User_Mean**: The mean of the user's monthly sequence for the feature (raw units).
+- **User_vs_Baseline_Delta**: `User_Mean - Baseline_Mean`. Positive means the user's value is above climatology; negative means below.
+- **Yield_Impact_kg_ha**: Change in predicted yield (kg/ha) when the feature is replaced by the baseline (calculated as `base_yield - perturbed_yield`). Positive means the user's feature values increased predicted yield relative to climatology.
+- **Abs_Impact_kg_ha**: Absolute magnitude of the impact; used for ranking the most influential features.
+- **Direction**: Simple sign label: `Positive` if `Yield_Impact_kg_ha >= 0`, otherwise `Negative`.
+- **Interpretation**: A short, human-readable explanation of why that feature may increase or decrease yield in this context.
+
+**Method**: This app uses a leave-one-feature-out sensitivity test — for each feature we replace the user's monthly profile with the climatology baseline (scaled for the model), re-run the ensemble, and compute the yield difference. This is fast and input-driven and does not rely on precomputed SHAP files.
+
+**Units (typical)**: `PRECTOTCORR` = mm/day, temperatures = °C, humidity = % or g/kg depending on feature.
+                        """
+                    )
+
+                driver_display = driver_summary.copy()
+                driver_display["User_Mean"] = driver_display["User_Mean"].round(3)
+                driver_display["Baseline_Mean"] = driver_display["Baseline_Mean"].round(3)
+                driver_display["User_vs_Baseline_Delta"] = driver_display["User_vs_Baseline_Delta"].round(3)
+                driver_display["Yield_Impact_kg_ha"] = driver_display["Yield_Impact_kg_ha"].round(1)
+                driver_display["Abs_Impact_kg_ha"] = driver_display["Abs_Impact_kg_ha"].round(1)
+
+                # Add human-readable interpretation text per feature
+                driver_display["Interpretation"] = driver_display.apply(
+                    lambda r: get_feature_explanation(r["Feature"], r.get("Direction", "")), axis=1
+                )
+
+                # Inline explainability expander for Yield_Impact_kg_ha
+                with st.expander("ⓘ Yield_Impact_kg_ha — meaning & caveats", expanded=False):
+                    st.markdown(
+                        """
+**Quick summary (friendly)**
+
+- `Yield_Impact_kg_ha` estimates how many kg/ha the model's predicted yield would change if we replaced one climate feature with its historical climatology. Use it to rank influential features and get intuition about drivers.
+
+**Details (technical)**
+
+- **What it is**: The change in predicted yield (kg/ha) when the user's monthly profile for a single feature is replaced by the climatology baseline and the model is re-evaluated.
+- **How to read it**: Positive means the user's current values *increase* predicted yield vs climatology; negative means they *decrease* predicted yield.
+- **Why this is not a causal proof**: This is a model-based what-if. It does not prove real-world causation because the model may encode correlations, features co-vary, there may be confounders, and the result depends on model validity.
+
+For causal evidence you'd need randomized interventions or causal-inference methods. Treat this number as a fast, practical interpretation aid — helpful for ranking and scenario comparison, not for proving causation.
+                        """
+                    )
+
+                st.dataframe(
+                    driver_display[["Rank", "Feature", "Parameter", "User_Mean", "Baseline_Mean", "User_vs_Baseline_Delta", "Yield_Impact_kg_ha", "Interpretation"]],
+                    use_container_width=True,
+                    hide_index=True,
+                )
+
+                # Chart mode toggle: Signed (show +/-) or Absolute (magnitude only)
+                chart_mode = st.radio(
+                    "Chart mode",
+                    ["Signed", "Absolute"],
+                    index=0,
+                    horizontal=True,
+                    key="driver_chart_mode",
+                )
+
+                st.markdown("**Legend:** 🟦 helps yield (positive impact), 🟥 hurts yield (negative impact)")
+
+                if chart_mode == "Signed":
+                    signed_colors = np.where(driver_display["Yield_Impact_kg_ha"] >= 0, "#2E86AB", "#D1495B")
+                    x_values = driver_display["Yield_Impact_kg_ha"]
+                    hover_tpl = "%{y}<br>Signed impact: %{x:.1f} kg/ha<extra></extra>"
+                    x_axis_title = "Signed yield impact (kg/ha)"
+                else:
+                    signed_colors = np.where(driver_display["Abs_Impact_kg_ha"] >= 0, "#2E86AB", "#2E86AB")
+                    x_values = driver_display["Abs_Impact_kg_ha"]
+                    hover_tpl = "%{y}<br>Absolute impact: %{x:.1f} kg/ha<extra></extra>"
+                    x_axis_title = "Absolute yield impact (kg/ha)"
+
+                # Plot with numeric labels and clearer margins (show only feature codes on y-axis)
+                driver_fig = go.Figure(
+                    go.Bar(
+                        x=x_values,
+                        y=list(driver_display["Feature"]),
+                        orientation="h",
+                        marker_color=signed_colors,
+                        text=x_values.round(1),
+                        texttemplate="%{text} kg/ha",
+                        textposition="auto",
+                        hovertemplate=hover_tpl,
+                    )
+                )
+                driver_fig.update_layout(
+                    title="Feature Influence on Yield",
+                    xaxis_title=x_axis_title,
+                    yaxis_title="",
+                    template="plotly_white",
+                    height=420,
+                    margin=dict(l=140, r=20, t=60, b=20),
+                    xaxis=dict(zeroline=True, zerolinecolor="#6b7280"),
+                )
+                st.plotly_chart(driver_fig, use_container_width=True)
 
             # Visual interpretation of confidence level
             if uncertainty_pct < 10.0:

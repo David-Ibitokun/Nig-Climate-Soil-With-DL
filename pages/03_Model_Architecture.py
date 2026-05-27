@@ -3,6 +3,7 @@ import streamlit.components.v1 as components
 import pandas as pd
 from pathlib import Path
 from data_loader import apply_global_style, load_data
+import urllib.parse
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
@@ -14,44 +15,6 @@ def _load_architecture_svg() -> str:
     if ARCHITECTURE_SVG.exists():
         return ARCHITECTURE_SVG.read_text(encoding="utf-8")
     return ""
-
-
-def _architecture_preview_html(svg_markup: str) -> str:
-        return f"""
-<html>
-    <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <style>
-            html, body {{
-                margin: 0;
-                padding: 0;
-                background: #ffffff;
-            }}
-            body {{
-                overflow: auto;
-                -webkit-overflow-scrolling: touch;
-            }}
-            .svg-frame {{
-                width: 100%;
-                min-width: 1193px;
-                overflow: auto;
-                touch-action: pan-x pan-y;
-            }}
-            .svg-frame svg {{
-                display: block;
-                width: 1193px;
-                max-width: none;
-                height: auto;
-            }}
-        </style>
-    </head>
-    <body>
-        <div class="svg-frame">
-            {svg_markup}
-        </div>
-    </body>
-</html>
-"""
 
 
 def render():
@@ -69,10 +32,141 @@ Learn how the TCN-MLP ensemble is wired, what each branch does, and how the full
 
     svg_markup = _load_architecture_svg()
     if svg_markup:
-        components.html(_architecture_preview_html(svg_markup), height=1020, scrolling=True)
-        st.caption("TCN-MLP architecture diagram. On mobile, pan the diagram or pinch to zoom for a closer look.")
+        # Use a smaller iframe height to avoid large vertical gaps on mobile
+        components.html(svg_markup, height=520, scrolling=True)
+        st.caption("TCN-MLP architecture diagram showing the temporal branch, context branches, fusion layer, and MLP head.")
+
+        # Create a data URL so users can open the SVG in a new tab or download it directly
+        try:
+            svg_encoded = urllib.parse.quote(svg_markup)
+            html_actions = """
+            <link href="https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet">
+            <style>
+            .actions-container { margin-top:8px; display:flex; gap:8px; align-items:center; font-family: 'Source Sans 3', 'Source Sans', sans-serif; flex-wrap:wrap; justify-content:flex-start; }
+            .actions-container button { padding:8px 12px; border-radius:6px; border:0; cursor:pointer; font-weight:600; font-family: inherit; color:white; min-width:120px; flex:0 1 auto; }
+            .actions-container button.open { background:#0d6efd; }
+            .actions-container button.download { background:#198754; }
+            .actions-container span.tip { color:#6c757d; font-size:0.9rem; font-family: inherit; flex:1 1 220px; min-width:160px; }
+
+            /* Responsive: stack buttons on small screens */
+            @media (max-width: 600px) {
+                .actions-container { flex-direction:column; align-items:stretch; gap:6px; }
+                .actions-container button { width:100%; min-width:0; padding:10px; font-size:15px; }
+                .actions-container span.tip { font-size:0.9rem; text-align:left; padding-left:4px; }
+            }
+            </style>
+            <div class="actions-container">
+                <button class="open" id="openSvgBtn">Open larger view</button>
+                <button class="download" id="downloadSvgBtn">Download SVG</button>
+                <button class="download" id="downloadPngBtn">Download PNG</button>
+            </div>
+            <script>
+            (function() {
+                const svgEncoded = "{SVG_ENCODED}";
+                function getSvg() { return decodeURIComponent(svgEncoded); }
+
+                document.getElementById('openSvgBtn').addEventListener('click', function() {
+                    try {
+                        const svg = getSvg();
+                        const blob = new Blob([svg], {type: 'image/svg+xml;charset=utf-8'});
+                        const url = URL.createObjectURL(blob);
+                        window.open(url, '_blank');
+                        // revoke after a short delay
+                        setTimeout(() => URL.revokeObjectURL(url), 20000);
+                    } catch (e) { console.error(e); alert('Unable to open SVG in new tab.'); }
+                });
+
+                document.getElementById('downloadSvgBtn').addEventListener('click', function() {
+                    try {
+                        const svg = getSvg();
+                        const blob = new Blob([svg], {type: 'image/svg+xml;charset=utf-8'});
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'TCN_MLP_Architecture.svg';
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                        setTimeout(() => URL.revokeObjectURL(url), 20000);
+                    } catch (e) { console.error(e); alert('Unable to download SVG.'); }
+                });
+
+                // PNG export: render SVG into canvas then save as PNG
+                document.getElementById('downloadPngBtn')?.addEventListener('click', function() {
+                    try {
+                        const svg = getSvg();
+                        // determine dimensions from <svg> attributes or viewBox
+                        let width = 1200, height = 800;
+                        try {
+                            const parser = new DOMParser();
+                            const doc = parser.parseFromString(svg, 'image/svg+xml');
+                            const svgEl = doc.documentElement;
+                            const wAttr = svgEl.getAttribute('width');
+                            const hAttr = svgEl.getAttribute('height');
+                            if (wAttr && hAttr) {
+                                width = parseFloat(wAttr);
+                                height = parseFloat(hAttr);
+                            } else {
+                                const vb = svgEl.getAttribute('viewBox');
+                                if (vb) {
+                                    const parts = vb.replace(/,/g,' ').trim().split(/\s+/);
+                                    if (parts.length === 4) {
+                                        width = parseFloat(parts[2]);
+                                        height = parseFloat(parts[3]);
+                                    }
+                                }
+                            }
+                        } catch (e) { /* fallback to defaults */ }
+
+                        const svgBlob = new Blob([svg], {type: 'image/svg+xml;charset=utf-8'});
+                        const url = URL.createObjectURL(svgBlob);
+                        const img = new Image();
+                        img.crossOrigin = 'anonymous';
+                        img.onload = function() {
+                            try {
+                                const canvas = document.createElement('canvas');
+                                canvas.width = Math.max(1, Math.round(width));
+                                canvas.height = Math.max(1, Math.round(height));
+                                const ctx = canvas.getContext('2d');
+                                // white background
+                                ctx.fillStyle = '#ffffff';
+                                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                canvas.toBlob(function(blob) {
+                                    if (!blob) { alert('PNG export failed'); return; }
+                                    const a = document.createElement('a');
+                                    const pngUrl = URL.createObjectURL(blob);
+                                    a.href = pngUrl;
+                                    a.download = 'TCN_MLP_Architecture.png';
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    a.remove();
+                                    setTimeout(() => URL.revokeObjectURL(pngUrl), 20000);
+                                }, 'image/png');
+                            } catch (err) { console.error(err); alert('PNG conversion failed.'); }
+                            URL.revokeObjectURL(url);
+                        };
+                        img.onerror = function(e) { console.error(e); alert('Failed to load SVG for PNG conversion.'); URL.revokeObjectURL(url); };
+                        img.src = url;
+                    } catch (e) { console.error(e); alert('Unable to export PNG.'); }
+                });
+
+            })();
+            </script>
+            """
+            html_actions = html_actions.replace("{SVG_ENCODED}", svg_encoded)
+            # Increase actions area height so stacked buttons fit on small screens
+            components.html(html_actions, height=180)
+        except Exception:
+            # Fallback: if data URL creation fails, show simple links/instructions
+            st.info("Unable to create download/open links for the SVG. You can still view it in the app.")
     else:
         st.info("Architecture diagram not found at TCN_MLP_Architecture.svg")
+
+    # Explicit mobile zoom note for users
+    st.markdown("""
+If you want to zoom in on mobile, convert the page to desktop view in your mobile browser.
+""")
 
     st.markdown("""
 The model has three working parts before the final prediction layer:
