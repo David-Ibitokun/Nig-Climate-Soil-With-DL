@@ -16,6 +16,44 @@ def _load_architecture_svg() -> str:
     return ""
 
 
+def _architecture_preview_html(svg_markup: str) -> str:
+        return f"""
+<html>
+    <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+            html, body {{
+                margin: 0;
+                padding: 0;
+                background: #ffffff;
+            }}
+            body {{
+                overflow: auto;
+                -webkit-overflow-scrolling: touch;
+            }}
+            .svg-frame {{
+                width: 100%;
+                min-width: 1193px;
+                overflow: auto;
+                touch-action: pan-x pan-y;
+            }}
+            .svg-frame svg {{
+                display: block;
+                width: 1193px;
+                max-width: none;
+                height: auto;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="svg-frame">
+            {svg_markup}
+        </div>
+    </body>
+</html>
+"""
+
+
 def render():
     apply_global_style()
     
@@ -31,10 +69,10 @@ Learn how the TCN-MLP ensemble is wired, what each branch does, and how the full
 
     svg_markup = _load_architecture_svg()
     if svg_markup:
-        components.html(svg_markup, height=980, scrolling=True)
-        st.caption("TCN-MLP architecture diagram showing the temporal branch, context branches, fusion layer, and MLP head.")
+        components.html(_architecture_preview_html(svg_markup), height=1020, scrolling=True)
+        st.caption("TCN-MLP architecture diagram. On mobile, pan the diagram or pinch to zoom for a closer look.")
     else:
-        st.info("Architecture diagram not found at TCN_MLP_Architecture.svg.")
+        st.info("Architecture diagram not found at TCN_MLP_Architecture.svg")
 
     st.markdown("""
 The model has three working parts before the final prediction layer:
