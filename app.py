@@ -138,10 +138,7 @@ Navigate through the sidebar to explore predictions, data, model architecture, e
         """
 This project predicts crop yields from 12-month climate sequences using a TCN–MLP ensemble trained with 5-fold cross-validation.
 
-- **Objective:** Provide actionable yield predictions (kg/ha) for multiple crops and regions, with uncertainty estimates from an ensemble of fold models.
-- **Data:** Processed historical climate sequences and observed yields are used to train the model; the processed dataset is available under `data/processed_dataset.csv`.
-- **Model:** A hybrid Temporal Convolutional Network (TCN) processes monthly climate sequences and is combined with MLP branches for region/crop/year context. The final system uses an ensemble of 5 fold models to produce a mean prediction and an uncertainty interval.
-- **Outputs:** The app exposes prediction interfaces, data exploration views, model architecture descriptions, and results visualizations (metrics, heatmaps, and diagnostic CSVs in `results/`).
+ **Data:** Processed historical climate sequences (PRECTOTCORR = monthly total precipitation, mm/month) and observed yields are used to train the model; the processed dataset is available under `data/processed_dataset.csv`.
 
 Use the sidebar to navigate to **Make Prediction**, **Data Explorer**, **Model Architecture**, and **Model Evaluation** pages for deeper analysis and downloadable artifacts.
         """

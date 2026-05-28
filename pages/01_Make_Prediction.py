@@ -422,6 +422,12 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
             st.error(f"Could not read the edited table: {exc}")
             st.stop()
     else:
+        st.info(
+            "CSV format requirements: the file must contain exactly these 9 columns (headers):\n"
+            "`T2M,T2M_MAX,T2M_MIN,TS,T2MDEW,T2MWET,PRECTOTCORR,RH2M,QV2M` and exactly 12 rows (one per month).\n"
+            "Do NOT include a separate leading 'Month' column — if your file has month labels, remove that column so the nine climate feature columns are the CSV headers.\n"
+            "You can use the provided sample `test.csv` as a reference."
+        )
         uploaded = st.file_uploader("Upload CSV with 12 rows and 9 climate columns", type=["csv"])
         if uploaded is None:
             st.info("Upload a CSV to define the monthly climate sequence.")
@@ -432,6 +438,13 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
         except Exception as exc:
             st.error(f"Could not read the CSV file: {exc}")
             st.stop()
+
+        # Short validation summary: show detected columns and row count
+        try:
+            detected_cols = list(csv_df.columns)
+            st.info(f"Detected {len(csv_df)} rows and {len(detected_cols)} columns. Columns: {', '.join(detected_cols)}")
+        except Exception:
+            pass
 
         missing_cols = [col for col in CLIMATE_FEATURES if col not in csv_df.columns]
         if missing_cols or len(csv_df) != 12:
@@ -458,6 +471,21 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
             mime="text/csv",
             width='stretch'
         )
+        # Provide the cleaned sample test.csv as an alternative example
+        try:
+            sample_path = Path(__file__).resolve().parent.parent / "test.csv"
+            if sample_path.exists():
+                with open(sample_path, "rb") as fh:
+                    sample_bytes = fh.read()
+                st.download_button(
+                    label="Download sample CSV (test.csv)",
+                    data=sample_bytes,
+                    file_name="test.csv",
+                    mime="text/csv",
+                    width='stretch',
+                )
+        except Exception:
+            pass
     
     with btn_col2:
         generate = st.button(
@@ -829,25 +857,25 @@ For causal evidence you'd need randomized interventions or causal-inference meth
             st.subheader("📈 Prediction Details")
             st.markdown(
                 f"""
-        **Crop**: {crop}  
-        **Region**: {region}  
-        **Year**: {year}  
-        **Model ensemble members**: {len(loaded_models)}  
-        **Uncertainty (half-width, 95% CI)**: {uncertainty_pct:.1f}%  
-        **Uncertainty band**: {uncertainty_band}
+**Crop**: {crop}  
+**Region**: {region}  
+**Year**: {year}  
+**Model ensemble members**: {len(loaded_models)}  
+**Uncertainty (half-width, 95% CI)**: {uncertainty_pct:.1f}%  
+**Uncertainty band**: {uncertainty_band}
 
-        The prediction uses cached training artifacts when available, falls back only when necessary, runs the ensemble once per model, then denormalizes the result back to yield units.
+The prediction uses cached training artifacts when available, falls back only when necessary, runs the ensemble once per model, then denormalizes the result back to yield units.
 
-        ---
+---
 
-        📋 **Your Input Data Summary**
+📋 **Your Input Data Summary**
 
-        You provided a 12-month climate sequence. Each row represents one calendar month (Jan–Dec) with 9 climate features:
-        - **Temperatures**: T2M, T2M_MAX, T2M_MIN, TS, T2MDEW, T2MWET (all in °C)
-        - **Precipitation**: PRECTOTCORR (**mm/month** — monthly total, not daily average)
-        - **Humidity**: RH2M (%), QV2M (g/kg)
+You provided a 12-month climate sequence. Each row represents one calendar month (Jan–Dec) with 9 climate features:
+- **Temperatures**: T2M, T2M_MAX, T2M_MIN, TS, T2MDEW, T2MWET (all in °C)
+- **Precipitation**: PRECTOTCORR (**mm/month** — monthly total, not daily average)
+- **Humidity**: RH2M (%), QV2M (g/kg)
 
-        ---
+---
 
 | Band | Threshold | Meaning |
 |---|---:|---|

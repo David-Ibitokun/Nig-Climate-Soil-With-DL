@@ -131,33 +131,6 @@ IF (PRECTOTCORR_month6-8 > 300mm) AND (Crop == "Cassava"):
 ## 🔬 **Tier 3: Research Roadmap (Strategic)**
 *Long-term value additions. Plan for Q3+ 2026.*
 
-### 🌱 Add Soil Variables (Enhanced Model)
-
-**Rationale:** Climate-only models are useful; soil+climate models are research-grade.
-
-**Priority Soil Features:**
-1. Drainage class (Poor/Moderate/Well) — **highest impact**
-2. Soil organic carbon
-3. Soil pH
-4. Soil texture (clay%, sand%)
-5. Elevation
-
-**Shortcut Option (No New Data Needed):**
-
-Simple **drainage class selector** (Poor/Moderate/Well) as rainfall impact multiplier:
-
-| Drainage | Multiplier | Rationale |
-|----------|-----------|-----------|
-| **Poor** | 1.5× | Waterlogging risk amplified; crops more sensitive to excess rain |
-| **Moderate** | 1.0× | Standard (baseline) |
-| **Well** | 0.7× | Risk mitigated; good drainage tolerates higher rainfall |
-
-Example: If model predicts rainfall penalty of `-500 kg/ha` on poor-drainage soils → display as `-750 kg/ha`.
-
-**Value:** High agronomic realism without new data pipelines. Especially critical for South-South region (lateritic vs. alluvial soils behave very differently).
-
----
-
 ### 🎯 Add Scenario Mode (What-If Analysis)
 
 **Purpose:** Climate adaptation planning; supports "what-if" exploration for farmers.
@@ -272,7 +245,6 @@ Interpretation:
 - [ ] Rule-based heuristics for flood/heat/disease risk
 
 ### Tier 3 Strategic
-- [ ] Drainage class selector (soil integration shortcut)
 - [ ] Scenario mode (what-if sliders)
 - [ ] Data provenance documentation
 - [ ] Model limitations disclaimer

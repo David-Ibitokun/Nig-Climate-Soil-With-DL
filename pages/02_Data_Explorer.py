@@ -99,17 +99,17 @@ Explore the climate and yield datasets to understand distributions, relationship
         st.subheader("🌡️ Climate Variables")
         
         st.markdown("""
-Key climate variables used in the model:
-- **Temperature**: Average seasonal temperature (°C)
-- **Rainfall**: Annual and seasonal precipitation (mm)
-- **Humidity**: Relative humidity (%)
+    Key climate variables used in the model:
+    - **Temperature**: Average seasonal temperature (°C)
+    - **Rainfall**: Monthly total precipitation (PRECTOTCORR) in mm/month (annual totals are the sum of monthly values)
+    - **Humidity**: Relative humidity (%)
         """)
         
         col1, col2 = st.columns(2)
         with col1:
             st.info("**Temperature Range**: 15-35°C across regions")
         with col2:
-            st.info("**Rainfall Range**: 500-3000mm annually")
+            st.info("**Typical annual rainfall**: 500–3000 mm (PRECTOTCORR stores monthly totals in mm/month)")
     
     with tab3:
         st.subheader("🌾 Crop Yield Data")
