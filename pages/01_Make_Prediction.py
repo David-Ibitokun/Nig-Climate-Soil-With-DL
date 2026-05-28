@@ -337,30 +337,39 @@ Select your inputs and the model will provide yield predictions with confidence 
             "Parameter_Name is the human-readable description of each climate variable, while Parameter_Code is the short code used in the dataset and model inputs."
         )
         st.code(
-            """Category,       Parameter_Code, Parameter_Name,         Unit
-temperature,    T2M,            Mean temperature at 2m, °C
-temperature,    T2M_MAX,        Max temperature at 2m,  °C
-temperature,    T2M_MIN,        Min temperature at 2m,  °C
-temperature,    TS,             land surface temperature,°C
-rainfall,       PRECTOTCORR,    Bias-corrected total precipitation,mm/day
-humidity,       RH2M,           Relative humidity at 2m,%
-humidity,       QV2M,           Specific humidity at 2m,g/kg
-humidity,       T2MDEW,         Dew point temperature at 2m,°C
-humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
+            """Category,       Parameter_Code, Parameter_Name,                      Unit
+temperature,    T2M,            Mean temperature at 2m,             °C
+temperature,    T2M_MAX,        Max temperature at 2m,              °C
+temperature,    T2M_MIN,        Min temperature at 2m,              °C
+temperature,    TS,             Land surface temperature,           °C
+rainfall,       PRECTOTCORR,    Bias-corrected total precipitation, mm/month
+humidity,       RH2M,           Relative humidity at 2m,            %
+humidity,       QV2M,           Specific humidity at 2m,            g/kg
+humidity,       T2MDEW,         Dew point temperature at 2m,        °C
+humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
         )
         st.markdown(
             """
 **Parameter_Name explanations**
 
-- **Mean temperature at 2m**: the average air temperature measured near the ground surface.
-- **Max temperature at 2m**: the hottest air temperature near the ground surface for the month.
-- **Min temperature at 2m**: the coldest air temperature near the ground surface for the month.
-- **Land surface temperature**: the temperature of the land itself, not the air above it.
-- **Bias-corrected total precipitation**: the monthly rainfall amount adjusted to reduce measurement bias.
-- **Relative humidity at 2m**: how much moisture is in the air near the ground, compared with the maximum possible.
-- **Specific humidity**: the actual amount of water vapor in the air.
-- **Dew point temperature at 2m**: the temperature at which air near the ground becomes saturated and condensation starts.
-- **Wet bulb temperature at 2m**: the temperature reached when air is cooled by evaporation; it reflects heat and moisture together.
+- **Mean temperature at 2m**: the average air temperature measured near the ground surface (°C).
+- **Max temperature at 2m**: the hottest air temperature near the ground surface for the month (°C).
+- **Min temperature at 2m**: the coldest air temperature near the ground surface for the month (°C).
+- **Land surface temperature**: the temperature of the land itself, not the air above it (°C).
+- **Bias-corrected total precipitation**: ⚠️ **the total monthly rainfall in mm** (NOT mm/day). Sum all daily rainfall for the month to get one value per month.
+- **Relative humidity at 2m**: how much moisture is in the air near the ground, compared with the maximum possible (%).
+- **Specific humidity**: the actual amount of water vapor in the air (g/kg).
+- **Dew point temperature at 2m**: the temperature at which air near the ground becomes saturated and condensation starts (°C).
+- **Wet bulb temperature at 2m**: the temperature reached when air is cooled by evaporation; it reflects heat and moisture together (°C).
+
+**📌 How to provide your data:**
+
+1. **Temperature features** (T2M, T2M_MAX, T2M_MIN, TS, T2MDEW, T2MWET): Provide the monthly average or aggregated value from daily observations (°C).
+2. **Precipitation (PRECTOTCORR)**: Provide the **monthly total** in mm. If you have daily data, sum all days in the month.
+3. **Humidity features** (RH2M, QV2M): Provide the monthly average (% or g/kg).
+4. **All 12 rows**: One row per month (Jan–Dec), in order. Your sequence should represent a complete annual climate profile.
+
+**⚠️ Important**: Do not provide daily averages for monthly fields. Use monthly aggregates.
             """
         )
 
@@ -705,7 +714,7 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
                 with st.expander("🛈 Explainability guide — what each column means", expanded=False):
                     st.markdown(
                         """
-- **Baseline_Mean**: The climatology value for that feature (median across the processed dataset months), shown in raw units (e.g., mm/day, °C). This is the reference we use when "neutralizing" a feature.
+- **Baseline_Mean**: The climatology value for that feature (median across the processed dataset months), shown in raw units (e.g., mm/month, °C). This is the reference we use when "neutralizing" a feature.
 - **Baseline (model input)**: The same climatology values but scaled to the model's feature space; used internally when re-evaluating the model.
 - **User_Mean**: The mean of the user's monthly sequence for the feature (raw units).
 - **User_vs_Baseline_Delta**: `User_Mean - Baseline_Mean`. Positive means the user's value is above climatology; negative means below.
@@ -716,7 +725,10 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,°C"""
 
 **Method**: This app uses a leave-one-feature-out sensitivity test — for each feature we replace the user's monthly profile with the climatology baseline (scaled for the model), re-run the ensemble, and compute the yield difference. This is fast and input-driven and does not rely on precomputed SHAP files.
 
-**Units (typical)**: `PRECTOTCORR` = mm/day, temperatures = °C, humidity = % or g/kg depending on feature.
+**Units (typical)**:
+- `PRECTOTCORR` = **mm/month** (total rainfall for the month, not daily average)
+- Temperatures = °C
+- Humidity = % (RH2M) or g/kg (QV2M)
                         """
                     )
 
@@ -828,18 +840,14 @@ For causal evidence you'd need randomized interventions or causal-inference meth
 
         ---
 
-        🔎 **Components Explained**
+        📋 **Your Input Data Summary**
 
-        - **95% CI (Confidence Interval)**: A range where we're 95% confident the true yield value lies.
-        - **Half-width**: Half the distance between the upper and lower bounds of that range.
-        - **± (Plus-Minus)**: The uncertainty extends in both directions from the point estimate.
-        - **Percentage**: Expresses the half-width relative to the predicted yield (half-width ÷ predicted yield × 100%).
-        """
-            )
+        You provided a 12-month climate sequence. Each row represents one calendar month (Jan–Dec) with 9 climate features:
+        - **Temperatures**: T2M, T2M_MAX, T2M_MIN, TS, T2MDEW, T2MWET (all in °C)
+        - **Precipitation**: PRECTOTCORR (**mm/month** — monthly total, not daily average)
+        - **Humidity**: RH2M (%), QV2M (g/kg)
 
-            st.markdown(
-                """
-**Uncertainty Bands**
+        ---
 
 | Band | Threshold | Meaning |
 |---|---:|---|

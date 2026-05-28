@@ -108,8 +108,8 @@ Learn how the TCN-MLP ensemble is wired, what each branch does, and how the full
                                 height = parseFloat(hAttr);
                             } else {
                                 const vb = svgEl.getAttribute('viewBox');
-                                if (vb) {
-                                    const parts = vb.replace(/,/g,' ').trim().split(/\s+/);
+                                    if (vb) {
+                                    const parts = vb.replace(/,/g,' ').trim().split(/\\s+/);
                                     if (parts.length === 4) {
                                         width = parseFloat(parts[2]);
                                         height = parseFloat(parts[3]);
