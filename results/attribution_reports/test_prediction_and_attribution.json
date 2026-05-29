@@ -1,0 +1,271 @@
+{
+  "input_sequence": [
+    {
+      "T2M": 26.524259567260746,
+      "T2M_MAX": 33.48568344116211,
+      "T2M_MIN": 18.56283569335937,
+      "TS": 27.845123291015625,
+      "T2MDEW": 12.084352493286133,
+      "T2MWET": 18.052379608154297,
+      "PRECTOTCORR": 15.34000015258789,
+      "RH2M": 45.234500885009766,
+      "QV2M": 9.052743911743164
+    },
+    {
+      "T2M": 27.823450088500977,
+      "T2M_MAX": 34.78205490112305,
+      "T2M_MIN": 20.86485195159912,
+      "TS": 29.184947967529297,
+      "T2MDEW": 14.562294960021973,
+      "T2MWET": 19.52468490600586,
+      "PRECTOTCORR": 35.68000030517578,
+      "RH2M": 50.15678024291992,
+      "QV2M": 10.02458953857422
+    },
+    {
+      "T2M": 28.524587631225582,
+      "T2M_MAX": 35.18472671508789,
+      "T2M_MIN": 21.86436462402344,
+      "TS": 29.985675811767575,
+      "T2MDEW": 18.024587631225582,
+      "T2MWET": 22.18456268310547,
+      "PRECTOTCORR": 85.43000030517578,
+      "RH2M": 60.48271942138672,
+      "QV2M": 12.04567813873291
+    },
+    {
+      "T2M": 28.04567813873291,
+      "T2M_MAX": 33.05678939819336,
+      "T2M_MIN": 22.52345085144043,
+      "TS": 28.567890167236328,
+      "T2MDEW": 21.03458976745605,
+      "T2MWET": 23.956789016723636,
+      "PRECTOTCORR": 142.8699951171875,
+      "RH2M": 75.23456573486328,
+      "QV2M": 15.02345085144043
+    },
+    {
+      "T2M": 27.52345085144043,
+      "T2M_MAX": 31.567890167236328,
+      "T2M_MIN": 22.04567813873291,
+      "TS": 27.234567642211918,
+      "T2MDEW": 21.956789016723636,
+      "T2MWET": 24.567890167236328,
+      "PRECTOTCORR": 185.33999633789065,
+      "RH2M": 82.15679168701172,
+      "QV2M": 16.52345085144043
+    },
+    {
+      "T2M": 26.823450088500977,
+      "T2M_MAX": 30.05678939819336,
+      "T2M_MIN": 21.567890167236328,
+      "TS": 26.12345695495605,
+      "T2MDEW": 22.345678329467773,
+      "T2MWET": 24.05678939819336,
+      "PRECTOTCORR": 218.4499969482422,
+      "RH2M": 88.45234680175781,
+      "QV2M": 17.034589767456055
+    },
+    {
+      "T2M": 26.234567642211918,
+      "T2M_MAX": 29.12345695495605,
+      "T2M_MIN": 21.345678329467773,
+      "TS": 25.456789016723636,
+      "T2MDEW": 21.956789016723636,
+      "T2MWET": 23.567890167236328,
+      "PRECTOTCORR": 152.7899932861328,
+      "RH2M": 90.12345886230467,
+      "QV2M": 16.756792068481445
+    },
+    {
+      "T2M": 26.05678939819336,
+      "T2M_MAX": 28.567890167236328,
+      "T2M_MIN": 20.956789016723636,
+      "TS": 25.12345695495605,
+      "T2MDEW": 22.12345695495605,
+      "T2MWET": 23.62345695495605,
+      "PRECTOTCORR": 165.4499969482422,
+      "RH2M": 92.3456802368164,
+      "QV2M": 16.9456787109375
+    },
+    {
+      "T2M": 26.567890167236328,
+      "T2M_MAX": 29.456789016723636,
+      "T2M_MIN": 21.12345695495605,
+      "TS": 25.789012908935547,
+      "T2MDEW": 22.456789016723636,
+      "T2MWET": 23.956789016723636,
+      "PRECTOTCORR": 205.67999267578125,
+      "RH2M": 89.56790161132812,
+      "QV2M": 17.234567642211914
+    },
+    {
+      "T2M": 27.234567642211918,
+      "T2M_MAX": 31.12345695495605,
+      "T2M_MIN": 21.345678329467773,
+      "TS": 27.456789016723636,
+      "T2MDEW": 21.12345695495605,
+      "T2MWET": 23.567890167236328,
+      "PRECTOTCORR": 138.77999877929688,
+      "RH2M": 80.23456573486328,
+      "QV2M": 15.567890167236328
+    },
+    {
+      "T2M": 27.789012908935547,
+      "T2M_MAX": 33.12345886230469,
+      "T2M_MIN": 20.456789016723636,
+      "TS": 28.9012393951416,
+      "T2MDEW": 17.234567642211914,
+      "T2MWET": 21.789012908935547,
+      "PRECTOTCORR": 48.560001373291016,
+      "RH2M": 65.456787109375,
+      "QV2M": 12.345678329467772
+    },
+    {
+      "T2M": 26.756792068481445,
+      "T2M_MAX": 33.06789016723633,
+      "T2M_MIN": 19.456789016723636,
+      "TS": 27.89012336730957,
+      "T2MDEW": 13.123456954956056,
+      "T2MWET": 19.234567642211918,
+      "PRECTOTCORR": 12.449999809265137,
+      "RH2M": 50.56789016723633,
+      "QV2M": 9.567890167236328
+    }
+  ],
+  "prediction": {
+    "input_file": "test.csv",
+    "y_pred": 1.8962702751159668,
+    "y_lower": 1.2786228656768799,
+    "y_upper": 2.8122758865356445,
+    "uncertainty_pct": 40.43867111206055,
+    "model_confidence": 59.56132888793945
+  },
+  "attribution": [
+    {
+      "Rank": 1,
+      "Feature": "PRECTOTCORR",
+      "Parameter": "Bias-corrected total precipitation",
+      "User_Mean": 117.2350082397461,
+      "Baseline_Mean": 623.2437744140625,
+      "User_vs_Baseline_Delta": -506.0087661743164,
+      "Yield_Impact_kg_ha": 0.20733380317687988,
+      "Abs_Impact_kg_ha": 0.20733380317687988,
+      "Direction": "Positive",
+      "Normalized_Impact_kg_ha": 0.003252937732004358,
+      "Normalized_Abs_Impact_kg_ha": 0.003252937732004358
+    },
+    {
+      "Rank": 2,
+      "Feature": "T2MWET",
+      "Parameter": "Wet bulb temperature at 2m",
+      "User_Mean": 22.340225219726562,
+      "Baseline_Mean": 23.023963928222656,
+      "User_vs_Baseline_Delta": -0.6837387084960938,
+      "Yield_Impact_kg_ha": -0.16899466514587402,
+      "Abs_Impact_kg_ha": 0.16899466514587402,
+      "Direction": "Negative",
+      "Normalized_Impact_kg_ha": -0.0026514206286539412,
+      "Normalized_Abs_Impact_kg_ha": 0.0026514206286539412
+    },
+    {
+      "Rank": 3,
+      "Feature": "T2M",
+      "Parameter": "Mean temperature at 2m",
+      "User_Mean": 27.158708572387695,
+      "Baseline_Mean": 25.723648071289062,
+      "User_vs_Baseline_Delta": 1.4350605010986328,
+      "Yield_Impact_kg_ha": -0.16062712669372559,
+      "Abs_Impact_kg_ha": 0.16062712669372559,
+      "Direction": "Negative",
+      "Normalized_Impact_kg_ha": -0.002520139182319935,
+      "Normalized_Abs_Impact_kg_ha": 0.002520139182319935
+    },
+    {
+      "Rank": 4,
+      "Feature": "T2M_MIN",
+      "Parameter": "Min temperature at 2m",
+      "User_Mean": 21.009519577026367,
+      "Baseline_Mean": 21.87871742248535,
+      "User_vs_Baseline_Delta": -0.8691978454589844,
+      "Yield_Impact_kg_ha": 0.11304962635040283,
+      "Abs_Impact_kg_ha": 0.11304962635040283,
+      "Direction": "Positive",
+      "Normalized_Impact_kg_ha": 0.0017736779507704858,
+      "Normalized_Abs_Impact_kg_ha": 0.0017736779507704858
+    },
+    {
+      "Rank": 5,
+      "Feature": "T2M_MAX",
+      "Parameter": "Max temperature at 2m",
+      "User_Mean": 31.883073806762695,
+      "Baseline_Mean": 30.18633460998535,
+      "User_vs_Baseline_Delta": 1.6967391967773438,
+      "Yield_Impact_kg_ha": -0.08626508712768555,
+      "Abs_Impact_kg_ha": 0.08626508712768555,
+      "Direction": "Negative",
+      "Normalized_Impact_kg_ha": -0.0013534452779650915,
+      "Normalized_Abs_Impact_kg_ha": 0.0013534452779650915
+    },
+    {
+      "Rank": 6,
+      "Feature": "T2MDEW",
+      "Parameter": "Dew point temperature at 2m",
+      "User_Mean": 19.002233505249023,
+      "Baseline_Mean": 20.304689407348633,
+      "User_vs_Baseline_Delta": -1.3024559020996094,
+      "Yield_Impact_kg_ha": -0.061174631118774414,
+      "Abs_Impact_kg_ha": 0.061174631118774414,
+      "Direction": "Negative",
+      "Normalized_Impact_kg_ha": -0.0009597917115229948,
+      "Normalized_Abs_Impact_kg_ha": 0.0009597917115229948
+    },
+    {
+      "Rank": 7,
+      "Feature": "TS",
+      "Parameter": "Land surface temperature",
+      "User_Mean": 27.463258743286133,
+      "Baseline_Mean": 25.854951858520508,
+      "User_vs_Baseline_Delta": 1.608306884765625,
+      "Yield_Impact_kg_ha": 0.044489264488220215,
+      "Abs_Impact_kg_ha": 0.044489264488220215,
+      "Direction": "Positive",
+      "Normalized_Impact_kg_ha": 0.0006980087419676057,
+      "Normalized_Abs_Impact_kg_ha": 0.0006980087419676057
+    },
+    {
+      "Rank": 8,
+      "Feature": "QV2M",
+      "Parameter": "Specific humidity at 2m",
+      "User_Mean": 14.010249137878418,
+      "Baseline_Mean": 15.782524108886719,
+      "User_vs_Baseline_Delta": -1.7722749710083008,
+      "Yield_Impact_kg_ha": -0.04369068145751953,
+      "Abs_Impact_kg_ha": 0.04369068145751953,
+      "Direction": "Negative",
+      "Normalized_Impact_kg_ha": -0.0006854794735468241,
+      "Normalized_Abs_Impact_kg_ha": 0.0006854794735468241
+    },
+    {
+      "Rank": 9,
+      "Feature": "RH2M",
+      "Parameter": "Relative humidity at 2m",
+      "User_Mean": 72.50116729736328,
+      "Baseline_Mean": 77.61674499511719,
+      "User_vs_Baseline_Delta": -5.115577697753906,
+      "Yield_Impact_kg_ha": 0.0011671781539916992,
+      "Abs_Impact_kg_ha": 0.0011671781539916992,
+      "Direction": "Positive",
+      "Normalized_Impact_kg_ha": 1.8312295433329388e-05,
+      "Normalized_Abs_Impact_kg_ha": 1.8312295433329388e-05
+    }
+  ],
+  "attrs": {
+    "attribution_diagnostic": {
+      "sum_impacts": -0.15471231937408447,
+      "total_delta": -0.002427339553833008,
+      "divergence_percent": 0.0,
+      "is_calibrated": true
+    }
+  }
+}

@@ -168,6 +168,7 @@ def load_data() -> Dict[str, Any]:
     data["region_ensemble_metrics"] = _read_csv(_RESULTS_DIR / "region_ensemble_metrics.csv")
     data["crop_region_resilience"] = _read_csv(_RESULTS_DIR / "crop_region_resilience.csv")
     data["processed_dataset"] = _read_csv(_ROOT / "data" / "processed_dataset.csv")
+    data["processed_dataset_metadata"] = _read_json(_ROOT / "data" / "processed_dataset.metadata.json")
 
     data["metadata"] = _read_json(_MODELS_DIR / "TCN_MLP_Crops_Mini_metadata.json")
     data["summary"] = _read_text(_RESULTS_DIR / "TCN_MLP_4Crops_RESULTS.txt")

@@ -4,7 +4,7 @@ REM Usage: Double-click this file to start the Streamlit app
 
 echo.
 echo ========================================
-echo  Climate Change and Food Security
+echo  Climate Change on Crop Yield
 echo  Nigeria Analysis Dashboard
 echo ========================================
 echo.
@@ -23,14 +23,14 @@ echo Python version: %PYTHON_VERSION%
 echo.
 
 REM Check if virtual environment exists
-if not exist "venv" (
+if not exist ".venv" (
     echo Creating virtual environment...
-    python -m venv venv
+    python -m venv .venv
 )
 
 REM Activate virtual environment
 echo Activating virtual environment...
-call venv\Scripts\activate.bat
+call .venv\Scripts\activate.bat
 
 REM Install/Update dependencies
 echo Installing dependencies...

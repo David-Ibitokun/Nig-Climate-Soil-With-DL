@@ -4,12 +4,33 @@ import numpy as np
 import json
 import os
 import traceback
+import io
+import zipfile
 from pathlib import Path
 
 import joblib
 import plotly.graph_objects as go
 
 from data_loader import apply_global_style, load_data
+from scripts.prediction_helpers import (
+    CLIMATE_FEATURES,
+    build_feature_sensitivity_summary,
+    build_global_climatology_sequence,
+    build_year_features_arr,
+    compute_climate_anomalies,
+    compute_historical_yield_baseline,
+    compute_regional_climate_baseline,
+    get_feature_explanation,
+    get_month_labels,
+    load_ensemble_models,
+    load_prediction_artifacts,
+    predict_ensemble_yield,
+)
+from scripts.prediction_report import (
+    build_prediction_report_filename,
+    build_prediction_report_markdown,
+    build_prediction_report_pdf_bytes,
+)
 
 # Small constant used in log-transform inversion
 EPSILON = 1e-6
@@ -57,228 +78,6 @@ FEATURE_EXPLANATIONS = {
     "RH2M": "Relative humidity influences evapotranspiration and disease risk; low RH increases water loss, high RH can favor disease—both affect yield depending on context.",
     "QV2M": "Specific humidity measures absolute moisture content; low specific humidity usually signals drier air and greater water stress on plants.",
 }
-
-
-def get_feature_explanation(feature: str, direction: str) -> str:
-    base = FEATURE_EXPLANATIONS.get(feature, "A climate feature affecting crop growth.")
-    if pd.isna(direction):
-        return base
-    direction_text = "increases" if direction.lower().startswith("p") or direction.lower() == "positive" else "decreases"
-    return f"{base} In this prediction, neutralizing this feature {direction_text} predicted yield."
-
-
-def get_month_labels() -> list[str]:
-    return [f"Month {month}" for month in range(1, 13)]
-
-
-def get_os_identifier() -> str:
-    return "windows" if os.name == "nt" else "linux"
-
-
-def normalize_model_path(path_value: str) -> str:
-    normalized = str(path_value).strip().replace("../", "").replace("..\\", "").replace("\\", "/")
-    if get_os_identifier() == "windows":
-        return normalized.replace("/", "\\")
-    return normalized
-
-
-@st.cache_resource(show_spinner="Loading prediction artifacts...")
-def load_prediction_artifacts() -> dict:
-    artifacts = {
-        "x_scaler": None,
-        "year_scaler": None,
-        "crop_stats": None,
-        "region_to_id": None,
-        "crop_to_id": None,
-    }
-
-    if X_SCALER_PATH.exists():
-        try:
-            artifacts["x_scaler"] = joblib.load(X_SCALER_PATH)
-        except Exception:
-            artifacts["x_scaler"] = None
-
-    if YEAR_SCALER_PATH.exists():
-        try:
-            artifacts["year_scaler"] = joblib.load(YEAR_SCALER_PATH)
-        except Exception:
-            artifacts["year_scaler"] = None
-
-    if CROP_STATS_PATH.exists():
-        try:
-            artifacts["crop_stats"] = joblib.load(CROP_STATS_PATH)
-        except Exception:
-            artifacts["crop_stats"] = None
-
-    if LABEL_MAPPINGS_PATH.exists():
-        try:
-            with open(LABEL_MAPPINGS_PATH, "r", encoding="utf-8") as handle:
-                mappings = json.load(handle)
-            artifacts["region_to_id"] = mappings.get("region_to_id")
-            artifacts["crop_to_id"] = mappings.get("crop_to_id")
-        except Exception:
-            artifacts["region_to_id"] = None
-            artifacts["crop_to_id"] = None
-
-    return artifacts
-
-
-@st.cache_resource(show_spinner="Loading ensemble models...")
-def load_ensemble_models() -> list:
-    models = []
-
-    if MODEL_DIR.is_dir():
-        for model_path in sorted(MODEL_DIR.glob("tcn_mlp_fold_*.keras")):
-            try:
-                import tensorflow as tf
-
-                models.append(tf.keras.models.load_model(str(model_path), compile=False))
-            except Exception:
-                continue
-
-    if not models:
-        fallback_primary = MODEL_DIR / "TCN_MLP_ENSEMBLE_best_fold.keras"
-        if fallback_primary.exists():
-            import tensorflow as tf
-
-            models.append(tf.keras.models.load_model(str(fallback_primary), compile=False))
-
-    if not models:
-        raise FileNotFoundError("No trained ensemble models found in /models")
-
-    return models
-
-
-def build_year_features_arr(years: np.ndarray) -> np.ndarray:
-    y_norm = ((years.reshape(-1, 1) - 1999.0) / 24.0).astype(np.float32)
-    y_sin = np.sin(2.0 * np.pi * y_norm).astype(np.float32)
-    y_cos = np.cos(2.0 * np.pi * y_norm).astype(np.float32)
-    return np.column_stack([y_norm, y_sin, y_cos]).astype(np.float32)
-
-
-def predict_ensemble_yield(
-    models: list,
-    X_input: np.ndarray,
-    region_id: int,
-    crop_id: int,
-    year_input: np.ndarray,
-    crop_mean: float,
-    crop_std: float,
-) -> tuple[float, float, float, float, float]:
-    import tensorflow as tf
-
-    X_tensor = tf.convert_to_tensor(X_input)
-    r_tensor = tf.convert_to_tensor(np.array([region_id], dtype=np.int32))
-    c_tensor = tf.convert_to_tensor(np.array([crop_id], dtype=np.int32))
-    yr_tensor = tf.convert_to_tensor(year_input)
-
-    preds_norm = []
-    for model in models:
-        try:
-            outputs = model([X_tensor, r_tensor, c_tensor, yr_tensor], training=False)
-            preds_norm.append(np.asarray(outputs).reshape(-1))
-        except Exception:
-            continue
-
-    if not preds_norm:
-        raise RuntimeError("All models failed during prediction.")
-
-    preds_array = np.stack(preds_norm, axis=1)
-    mean_norm = preds_array.mean(axis=1).ravel()[0]
-    std_norm = preds_array.std(axis=1, ddof=1).ravel()[0] if preds_array.shape[1] > 1 else 0.0
-
-    y_log_pred = mean_norm * crop_std + crop_mean
-    y_log_lower = (mean_norm - 1.96 * std_norm) * crop_std + crop_mean
-    y_log_upper = (mean_norm + 1.96 * std_norm) * crop_std + crop_mean
-
-    y_pred = max(np.exp(y_log_pred) - EPSILON, 0.0)
-    y_lower = max(np.exp(y_log_lower) - EPSILON, 0.0)
-    y_upper = max(np.exp(y_log_upper) - EPSILON, 0.0)
-
-    return y_pred, y_lower, y_upper, mean_norm, std_norm
-
-
-def build_global_climatology_sequence(df: pd.DataFrame) -> np.ndarray:
-    seq = np.zeros((1, 12, len(CLIMATE_FEATURES)), dtype=np.float32)
-    if df.empty:
-        return seq
-
-    for feature_index, feature_name in enumerate(CLIMATE_FEATURES):
-        for month in range(1, 13):
-            column_name = f"{feature_name}_m{month}"
-            if column_name in df.columns:
-                seq[0, month - 1, feature_index] = float(df[column_name].median())
-
-    return seq
-
-
-def build_feature_sensitivity_summary(
-    models: list,
-    X_input: np.ndarray,
-    baseline_scaled_sequence: np.ndarray,
-    baseline_raw_sequence: np.ndarray,
-    region_id: int,
-    crop_id: int,
-    year_input: np.ndarray,
-    crop_mean: float,
-    crop_std: float,
-    user_sequence: np.ndarray,
-) -> pd.DataFrame:
-    base_yield, _, _, _, _ = predict_ensemble_yield(
-        models=models,
-        X_input=X_input,
-        region_id=region_id,
-        crop_id=crop_id,
-        year_input=year_input,
-        crop_mean=crop_mean,
-        crop_std=crop_std,
-    )
-
-    rows = []
-    for feature_index, feature_name in enumerate(CLIMATE_FEATURES):
-        perturbed_input = X_input.copy()
-        # use the scaled baseline values for model input
-        perturbed_input[0, :, feature_index] = baseline_scaled_sequence[0, :, feature_index]
-
-        perturbed_yield, _, _, _, _ = predict_ensemble_yield(
-            models=models,
-            X_input=perturbed_input,
-            region_id=region_id,
-            crop_id=crop_id,
-            year_input=year_input,
-            crop_mean=crop_mean,
-            crop_std=crop_std,
-        )
-
-        impact = float(base_yield - perturbed_yield)
-        absolute_impact = abs(impact)
-        # user_sequence is in raw units; baseline_raw_sequence is also raw units
-        user_mean = float(np.mean(user_sequence[0, :, feature_index]))
-        baseline_mean = float(np.mean(baseline_raw_sequence[0, :, feature_index]))
-
-        rows.append(
-            {
-                "Feature": feature_name,
-                "Parameter": CLIMATE_FEATURE_LABELS.get(feature_name, feature_name),
-                "User_Mean": user_mean,
-                "Baseline_Mean": baseline_mean,
-                "User_vs_Baseline_Delta": user_mean - baseline_mean,
-                "Yield_Impact_kg_ha": impact,
-                "Abs_Impact_kg_ha": absolute_impact,
-                "Direction": "Positive" if impact >= 0 else "Negative",
-            }
-        )
-
-    summary_df = pd.DataFrame(rows)
-    if summary_df.empty:
-        return summary_df
-
-    summary_df = summary_df.sort_values(
-        by=["Abs_Impact_kg_ha", "Yield_Impact_kg_ha"],
-        ascending=False,
-    ).reset_index(drop=True)
-    summary_df.insert(0, "Rank", np.arange(1, len(summary_df) + 1))
-    return summary_df
 
 
 def render():
@@ -338,15 +137,15 @@ Select your inputs and the model will provide yield predictions with confidence 
         )
         st.code(
             """Category,       Parameter_Code, Parameter_Name,                      Unit
-temperature,    T2M,            Mean temperature at 2m,             °C
-temperature,    T2M_MAX,        Max temperature at 2m,              °C
-temperature,    T2M_MIN,        Min temperature at 2m,              °C
-temperature,    TS,             Land surface temperature,           °C
-rainfall,       PRECTOTCORR,    Bias-corrected total precipitation, mm/month
-humidity,       RH2M,           Relative humidity at 2m,            %
-humidity,       QV2M,           Specific humidity at 2m,            g/kg
-humidity,       T2MDEW,         Dew point temperature at 2m,        °C
-humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
+    temperature,    T2M,            Mean temperature at 2m,             °C
+    temperature,    T2M_MAX,        Max temperature at 2m,              °C
+    temperature,    T2M_MIN,        Min temperature at 2m,              °C
+    temperature,    TS,             Land surface temperature,           °C
+    rainfall,       PRECTOTCORR,    Bias-corrected total precipitation, mm/month
+    humidity,       RH2M,           Relative humidity at 2m,            %
+    humidity,       QV2M,           Specific humidity at 2m,            g/kg
+    humidity,       T2MDEW,         Dew point temperature at 2m,        °C
+    humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
         )
         st.markdown(
             """
@@ -364,12 +163,12 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
 
 **📌 How to provide your data:**
 
-1. **Temperature features** (T2M, T2M_MAX, T2M_MIN, TS, T2MDEW, T2MWET): Provide the monthly average or aggregated value from daily observations (°C).
+1. **Temperature features** (T2M, T2M_MAX, T2M_MIN, TS): Provide the monthly average or aggregated value from daily observations (°C).
 2. **Precipitation (PRECTOTCORR)**: Provide the **monthly total** in mm. If you have daily data, sum all days in the month.
-3. **Humidity features** (RH2M, QV2M): Provide the monthly average (% or g/kg).
+3. **Humidity features** (RH2M, QV2M, T2MDEW, T2MWET): Provide the monthly average (% or g/kg for QV2M; °C for dew/wet-bulb temperatures).
 4. **All 12 rows**: One row per month (Jan–Dec), in order. Your sequence should represent a complete annual climate profile.
 
-**⚠️ Important**: Do not provide daily averages for monthly fields. Use monthly aggregates.
+**⚠️ Important**: Do not provide daily averages for monthly fields. Use monthly aggregates. If unsure, use the Download sample CSV button and open it in Excel.
             """
         )
 
@@ -493,10 +292,16 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
             type="primary",
             width='content'
         )
+        if generate:
+            st.session_state['generated_prediction'] = True
+
+        # Allow clearing the generated results
+        if st.button("Reset Prediction", type="secondary"):
+            st.session_state['generated_prediction'] = False
 
     # Prediction (real path)
-    if generate:
-        st.info("Running cached artifact loading, ensemble prediction, and denormalization.")
+    if st.session_state.get('generated_prediction', False):
+        st.info("Loading models and making the prediction. This may take a few seconds.")
 
         try:
             import tensorflow as tf
@@ -590,7 +395,7 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
                 st.error("Selected region/crop not found in fallback mapping.")
                 return
 
-            st.warning("Using fallback sorted label mapping because label_mappings.json is not available.")
+            st.warning("Label mapping file not found; using a simple fallback mapping.")
 
         try:
             X_tensor = tf.convert_to_tensor(X_in)
@@ -651,9 +456,42 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
 
             st.subheader("📊 Prediction Results")
 
+            # Explanation of confidence calculation
+            with st.expander("ℹ️ How is Model Ensemble Confidence calculated?", expanded=False):
+                st.markdown(
+                    """
+**Definition:**
+
+Model Ensemble Confidence = `100 - uncertainty_pct`, where:
+- `uncertainty_pct = (CI_half_width / mean_prediction) * 100`
+- `CI_half_width` = half-width of the 95% confidence interval across the 5 ensemble models
+- `mean_prediction` = ensemble mean yield estimate
+
+**Interpretation:**
+
+- **90%+**: Excellent. All 5 models strongly agree. Prediction is very reliable for planning.
+- **75–90%**: Good. Models mostly agree with minor spread. Suitable for decision-making.
+- **60–75%**: Moderate. Noticeable spread; use as one input among others.
+- **<60%**: Low. High disagreement among models. Gather additional data or seek expert input.
+
+**What it reflects:**
+- How well the ensemble members agree, not absolute accuracy.
+- A narrow confidence interval (models agreeing) → high confidence.
+- A wide confidence interval (models disagreeing) → low confidence.
+
+**What it does NOT reflect:**
+- Whether the model is correct (accuracy vs. test data).
+- Bias in all 5 models agreeing on a wrong answer.
+- Unrepresented climate scenarios (out-of-training-distribution inputs).
+
+**Recommendation:**
+Note: this is about model agreement, not a guarantee the prediction is correct. Combine it with domain knowledge (local agronomist insight, historical context, management constraints) for robust planning.
+                    """
+                )
+
             # 1. Expected Range (PRIMARY - most actionable)
             st.metric(
-                "🎯 Expected Yield Range (95% Confidence Interval)",
+                "🎯 Expected Yield Range (approx.)",
                 f"{y_lower:,.0f} – {y_upper:,.0f} kg/ha",
                 delta=f"±{half_width:,.0f} kg/ha",
                 delta_color="normal"
@@ -682,7 +520,10 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
                 f"{model_confidence:.1f}%",
                 delta=confidence_label,
                 delta_color=delta_color,
-                help="Reflects how much the 5 ensemble models agree with each other. Higher % = stronger consensus."
+                help="Reflects how much the 5 ensemble models agree with each other. Higher % = stronger consensus.\n\n"
+                     "**Calculation**: 100% - (uncertainty spread as %% of prediction).\n"
+                     "Uncertainty is derived from 95%% CI half-width across ensemble members.\n"
+                     "~90%+: Very reliable; <50%: High disagreement, seek more data."
             )
 
             # 3. Point Estimate (secondary detail)
@@ -714,12 +555,121 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
                 )
             )
             fig.update_layout(
-                title="Yield Prediction with 95% Confidence Interval",
+                title="Yield Prediction with uncertainty range",
                 yaxis_title="Yield (kg/ha)",
                 template="plotly_white",
                 height=420,
             )
             st.plotly_chart(fig, width="stretch")
+            # Try to export the prediction chart as PNG for inclusion in reports
+            pred_png = None
+            try:
+                pred_png = fig.to_image(format="png", engine="kaleido", scale=2)
+            except Exception:
+                try:
+                    pred_png = fig.to_image(format="png", engine="kaleido", scale=1)
+                except Exception:
+                    try:
+                        pred_png = fig.to_image(format="png")
+                    except Exception:
+                        pred_png = None
+
+            # Compute and display temporal comparison vs regional baseline
+            historical_summary = {}
+            try:
+                regional_baseline = compute_regional_climate_baseline(df, region)
+                anomalies_df = compute_climate_anomalies(X_seq, regional_baseline)
+                
+                if not anomalies_df.empty:
+                    st.subheader("📊 How your months compare to the region")
+                    st.caption("Shows how unusual each month is compared with the region's typical climate (standard and percent difference).")
+                    
+                    with st.expander("📈 View anomalies by feature", expanded=False):
+                        # Summary stats
+                        extreme_anomalies = anomalies_df[anomalies_df['Z_Score'].abs() > 1.5]
+                        if not extreme_anomalies.empty:
+                            st.warning(
+                                f"⚠️ {len(extreme_anomalies)} month(s) look unusually different from the region's typical climate.\n"
+                                "These months may require extra attention when planning."
+                            )
+                        
+                        # Display top positive and negative anomalies
+                        top_positive = anomalies_df.nlargest(3, 'Z_Score')[['Feature', 'Month', 'User_Value', 'Baseline_Mean', 'Z_Score', 'Anomaly_Percent']]
+                        top_negative = anomalies_df.nsmallest(3, 'Z_Score')[['Feature', 'Month', 'User_Value', 'Baseline_Mean', 'Z_Score', 'Anomaly_Percent']]
+                        
+                        if not top_positive.empty:
+                            st.write("**Top 3 Positive Anomalies** (above baseline):")
+                            top_positive_display = top_positive.copy()
+                            top_positive_display['Z_Score'] = top_positive_display['Z_Score'].round(2)
+                            top_positive_display['Anomaly_Percent'] = top_positive_display['Anomaly_Percent'].round(1)
+                            top_positive_display['User_Value'] = top_positive_display['User_Value'].round(2)
+                            top_positive_display['Baseline_Mean'] = top_positive_display['Baseline_Mean'].round(2)
+                            st.dataframe(top_positive_display, hide_index=True, width='stretch')
+                        
+                        if not top_negative.empty:
+                            st.write("**Top 3 Negative Anomalies** (below baseline):")
+                            top_negative_display = top_negative.copy()
+                            top_negative_display['Z_Score'] = top_negative_display['Z_Score'].round(2)
+                            top_negative_display['Anomaly_Percent'] = top_negative_display['Anomaly_Percent'].round(1)
+                            top_negative_display['User_Value'] = top_negative_display['User_Value'].round(2)
+                            top_negative_display['Baseline_Mean'] = top_negative_display['Baseline_Mean'].round(2)
+                            st.dataframe(top_negative_display, hide_index=True, width='stretch')
+
+                    # Temporal comparison vs historical yield baseline
+                    try:
+                        hist = compute_historical_yield_baseline(df, region, crop)
+                        if hist.get('count', 0) > 0 and hist.get('mean') is not None:
+                            # Percent difference and z-score
+                            pct_diff = (y_pred - hist['mean']) / max(hist['mean'], EPSILON) * 100.0
+                            z_score = (y_pred - hist['mean']) / hist['std'] if hist['std'] and hist['std'] > 0 else None
+                            # Percentile rank among historical yields
+                            ranks = hist.get('yields', [])
+                            if ranks:
+                                rank_pct = float(np.sum(np.array(ranks) < y_pred) / len(ranks) * 100.0)
+                            else:
+                                rank_pct = None
+
+                            st.subheader("📅 Comparison vs Historical Yield")
+                            if rank_pct is not None:
+                                # Simple human phrasing
+                                if rank_pct >= 90:
+                                    rank_text = f"(Top {100 - int(rank_pct)}% historically)"
+                                elif rank_pct <= 10:
+                                    rank_text = f"(Bottom {int(rank_pct)}% historically)"
+                                else:
+                                    rank_text = f"(Percentile {rank_pct:.0f})"
+                            else:
+                                rank_text = ""
+
+                            pct_label = f"{pct_diff:+.0f}% vs historical mean"
+                            if z_score is not None:
+                                z_label = f"Z = {z_score:.2f}"
+                            else:
+                                z_label = "Z = N/A"
+
+                            col_a, col_b = st.columns([2, 3])
+                            with col_a:
+                                st.metric("Historical mean yield", f"{hist['mean']:.0f} kg/ha", delta=None)
+                            with col_b:
+                                st.markdown(f"**Prediction vs historical:** {pct_label} — {z_label} {rank_text}")
+                            historical_summary = {
+                                "mean": float(hist.get("mean", 0.0)),
+                                "std": float(hist.get("std", 0.0)),
+                                "count": int(hist.get("count", 0)),
+                                "pct_diff": float(pct_diff),
+                                "z_score": float(z_score) if z_score is not None else None,
+                                "percentile_rank": float(rank_pct) if rank_pct is not None else None,
+                            }
+                        else:
+                            st.info("Historical yield baseline not available for this region/crop.")
+                    except Exception as e:
+                        st.warning(f"Could not compute historical yield comparison: {e}")
+            except Exception as e:
+                st.warning(f"Could not compute climate anomalies: {e}")
+
+            # Agronomic risk details and Climate Stress Scorecard removed — model not trained
+            # to provide learned agronomic risk attributions. We keep driver sensitivity
+            # and temporal comparisons only.
 
             driver_summary = build_feature_sensitivity_summary(
                 models=loaded_models,
@@ -736,7 +686,7 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
             if not driver_summary.empty:
                 st.subheader("🔎 Drivers Behind This Prediction")
                 st.caption(
-                    "This is a fast what-if sensitivity analysis: each feature is neutralized to the climatology baseline one at a time, then the model is re-evaluated to estimate its yield impact."
+                    "We temporarily replace one feature at a time with its typical value to see how the prediction changes. Use these values to see which factors matter most."
                 )
 
                 with st.expander("🛈 Explainability guide — what each column means", expanded=False):
@@ -766,35 +716,68 @@ humidity,       T2MWET,         Wet bulb temperature at 2m,         °C"""
                 driver_display["User_vs_Baseline_Delta"] = driver_display["User_vs_Baseline_Delta"].round(3)
                 driver_display["Yield_Impact_kg_ha"] = driver_display["Yield_Impact_kg_ha"].round(1)
                 driver_display["Abs_Impact_kg_ha"] = driver_display["Abs_Impact_kg_ha"].round(1)
+                # Round normalized columns if present
+                if "Normalized_Impact_kg_ha" in driver_display.columns:
+                    driver_display["Normalized_Impact_kg_ha"] = driver_display["Normalized_Impact_kg_ha"].round(1)
+                if "Normalized_Abs_Impact_kg_ha" in driver_display.columns:
+                    driver_display["Normalized_Abs_Impact_kg_ha"] = driver_display["Normalized_Abs_Impact_kg_ha"].round(1)
 
                 # Add human-readable interpretation text per feature
                 driver_display["Interpretation"] = driver_display.apply(
                     lambda r: get_feature_explanation(r["Feature"], r.get("Direction", "")), axis=1
                 )
 
+                sequence_df = pd.DataFrame(X_seq[0], columns=CLIMATE_FEATURES, index=get_month_labels())
+
                 # Inline explainability expander for Yield_Impact_kg_ha
-                with st.expander("ⓘ Yield_Impact_kg_ha — meaning & caveats", expanded=False):
+                with st.expander("ⓘ What the feature numbers mean", expanded=False):
                     st.markdown(
                         """
-**Quick summary (friendly)**
+Quick summary:
 
-- `Yield_Impact_kg_ha` estimates how many kg/ha the model's predicted yield would change if we replaced one climate feature with its historical climatology. Use it to rank influential features and get intuition about drivers.
+- Each row shows how much the model's yield estimate would change (in kg/ha) if we replace that one climate feature with its typical historical value.
+- Use these numbers to see which features are most important for this prediction.
 
-**Details (technical)**
-
-- **What it is**: The change in predicted yield (kg/ha) when the user's monthly profile for a single feature is replaced by the climatology baseline and the model is re-evaluated.
-- **How to read it**: Positive means the user's current values *increase* predicted yield vs climatology; negative means they *decrease* predicted yield.
-- **Why this is not a causal proof**: This is a model-based what-if. It does not prove real-world causation because the model may encode correlations, features co-vary, there may be confounders, and the result depends on model validity.
-
-For causal evidence you'd need randomized interventions or causal-inference methods. Treat this number as a fast, practical interpretation aid — helpful for ranking and scenario comparison, not for proving causation.
-                        """
+Important notes:
+- These are model-based "what-if" results, not proof of real-world cause and effect.
+- Because the model considers all features together, the individual numbers may not add up exactly to the model's total change. Use them for ranking and intuition, not as exact arithmetic.
+"""
                     )
 
+                # Sanitize DataFrame.attrs to native Python types to avoid pyarrow/json issues in some environments
+                try:
+                    if isinstance(driver_display.attrs, dict):
+                        for _k, _v in list(driver_display.attrs.items()):
+                            # numpy scalars expose .item(); convert them to native types
+                            try:
+                                if hasattr(_v, "item"):
+                                    driver_display.attrs[_k] = _v.item()
+                            except Exception:
+                                # fallback: leave value as-is
+                                pass
+                except Exception:
+                    pass
+
+                cols_to_show = ["Rank", "Feature", "Parameter", "User_Mean", "Baseline_Mean", "User_vs_Baseline_Delta", "Yield_Impact_kg_ha"]
+                if "Normalized_Impact_kg_ha" in driver_display.columns:
+                    cols_to_show.append("Normalized_Impact_kg_ha")
+                cols_to_show.append("Interpretation")
+
                 st.dataframe(
-                    driver_display[["Rank", "Feature", "Parameter", "User_Mean", "Baseline_Mean", "User_vs_Baseline_Delta", "Yield_Impact_kg_ha", "Interpretation"]],
+                    driver_display[cols_to_show],
                     width='stretch',
                     hide_index=True,
                 )
+
+                # Friendly attribution notice when the numbers don't add up well
+                if 'attribution_diagnostic' in getattr(driver_summary, 'attrs', {}):
+                    diag = driver_summary.attrs.get('attribution_diagnostic', {})
+                    if not diag.get("is_calibrated", True):
+                        st.warning(
+                            "The individual feature numbers below are useful for ranking which factors matter most, "
+                            f"but they do not add up exactly: the features sum to {diag.get('sum_impacts', 0):.0f} kg/ha while the model's total change is {diag.get('total_delta', 0):.0f} kg/ha ({diag.get('divergence_percent', 0.0):.1f}% difference).\n\n"
+                            "This happens because the model looks at all inputs together (features can interact). Treat the per-feature values as relative importance, not as a precise breakdown."
+                        )
 
                 # Chart mode toggle: Signed (show +/-) or Absolute (magnitude only)
                 chart_mode = st.radio(
@@ -807,25 +790,31 @@ For causal evidence you'd need randomized interventions or causal-inference meth
 
                 st.markdown("**Legend:** 🟦 helps yield (positive impact), 🟥 hurts yield (negative impact)")
 
+                # Coerce numeric values for plotting and ensure color array length matches
                 if chart_mode == "Signed":
-                    signed_colors = np.where(driver_display["Yield_Impact_kg_ha"] >= 0, "#2E86AB", "#D1495B")
-                    x_values = driver_display["Yield_Impact_kg_ha"]
+                    raw_vals = pd.to_numeric(driver_display["Yield_Impact_kg_ha"], errors='coerce').fillna(0.0).astype(float)
+                    signed_colors = np.where(raw_vals >= 0, "#2E86AB", "#D1495B")
+                    x_values_plot = raw_vals
                     hover_tpl = "%{y}<br>Signed impact: %{x:.1f} kg/ha<extra></extra>"
                     x_axis_title = "Signed yield impact (kg/ha)"
+                    text_vals = raw_vals.round(1)
                 else:
-                    signed_colors = np.where(driver_display["Abs_Impact_kg_ha"] >= 0, "#2E86AB", "#2E86AB")
-                    x_values = driver_display["Abs_Impact_kg_ha"]
+                    abs_col = "Normalized_Abs_Impact_kg_ha" if "Normalized_Abs_Impact_kg_ha" in driver_display.columns else "Abs_Impact_kg_ha"
+                    raw_vals = pd.to_numeric(driver_display[abs_col], errors='coerce').fillna(0.0).astype(float)
+                    signed_colors = np.array(["#2E86AB"] * len(raw_vals), dtype=object)
+                    x_values_plot = raw_vals
                     hover_tpl = "%{y}<br>Absolute impact: %{x:.1f} kg/ha<extra></extra>"
                     x_axis_title = "Absolute yield impact (kg/ha)"
+                    text_vals = raw_vals.round(1)
 
                 # Plot with numeric labels and clearer margins (show only feature codes on y-axis)
                 driver_fig = go.Figure(
                     go.Bar(
-                        x=x_values,
+                        x=x_values_plot.tolist(),
                         y=list(driver_display["Feature"]),
                         orientation="h",
-                        marker_color=signed_colors,
-                        text=x_values.round(1),
+                        marker_color=signed_colors.tolist(),
+                        text=text_vals.tolist(),
                         texttemplate="%{text} kg/ha",
                         textposition="auto",
                         hovertemplate=hover_tpl,
@@ -841,6 +830,18 @@ For causal evidence you'd need randomized interventions or causal-inference meth
                     xaxis=dict(zeroline=True, zerolinecolor="#6b7280"),
                 )
                 st.plotly_chart(driver_fig, width='stretch')
+                # Try to export the driver influence chart as PNG for reports
+                driver_png = None
+                try:
+                    driver_png = driver_fig.to_image(format="png", engine="kaleido", scale=2)
+                except Exception:
+                    try:
+                        driver_png = driver_fig.to_image(format="png", engine="kaleido", scale=1)
+                    except Exception:
+                        try:
+                            driver_png = driver_fig.to_image(format="png")
+                        except Exception:
+                            driver_png = None
 
             # Visual interpretation of confidence level
             if uncertainty_pct < 10.0:
@@ -852,6 +853,92 @@ For causal evidence you'd need randomized interventions or causal-inference meth
             else:
                 uncertainty_band = "High"
                 st.warning(f"⚠ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — high disagreement; interpret with caution")
+
+            # Build downloadable Markdown/PDF report after uncertainty_band is defined
+            report_markdown = None
+            try:
+                images = {}
+                if 'pred_png' in locals() and pred_png is not None:
+                    images['prediction_chart'] = pred_png
+                if 'driver_png' in locals() and driver_png is not None:
+                    images['driver_chart'] = driver_png
+
+                report_markdown = build_prediction_report_markdown(
+                    crop=crop,
+                    region=region,
+                    year=year,
+                    y_pred=y_pred,
+                    y_lower=y_lower,
+                    y_upper=y_upper,
+                    uncertainty_pct=uncertainty_pct,
+                    model_confidence=model_confidence,
+                    uncertainty_band=uncertainty_band,
+                    model_members=len(loaded_models),
+                    sequence_df=sequence_df,
+                    driver_df=driver_display,
+                    historical_summary=historical_summary,
+                    anomalies_df=anomalies_df if 'anomalies_df' in locals() else None,
+                    images=images if images else None,
+                )
+            except Exception as exc:
+                st.warning(f"Could not build Markdown report: {exc}")
+
+            if report_markdown is not None:
+                dl_col_md, dl_col_pdf, dl_col_zip = st.columns([1, 1, 1])
+                with dl_col_md:
+                    st.download_button(
+                        label="Download Markdown report",
+                        data=report_markdown.encode("utf-8"),
+                        file_name=build_prediction_report_filename(crop, region, year, suffix="md"),
+                        mime="text/markdown",
+                        width='stretch',
+                    )
+
+                # Generate PDF (may fail) and expose in its own column
+                report_pdf = None
+                try:
+                    report_pdf = build_prediction_report_pdf_bytes(report_markdown, images=images if images else None)
+                except Exception as exc:
+                    with dl_col_pdf:
+                        st.warning(f"PDF export failed: {exc}")
+
+                with dl_col_pdf:
+                    if report_pdf is not None:
+                        st.download_button(
+                            label="Download PDF report",
+                            data=report_pdf,
+                            file_name=build_prediction_report_filename(crop, region, year, suffix="pdf"),
+                            mime="application/pdf",
+                            width='stretch',
+                        )
+                    else:
+                        st.info("PDF not available; download Markdown or ZIP instead.")
+
+                # Build ZIP containing markdown and PDF (if available) in third column
+                try:
+                    zip_buf = io.BytesIO()
+                    with zipfile.ZipFile(zip_buf, mode="w", compression=zipfile.ZIP_DEFLATED) as zf:
+                        md_name = build_prediction_report_filename(crop, region, year, suffix="md")
+                        zf.writestr(md_name, report_markdown.encode("utf-8"))
+                        if report_pdf is not None:
+                            pdf_name = build_prediction_report_filename(crop, region, year, suffix="pdf")
+                            zf.writestr(pdf_name, report_pdf)
+                    zip_buf.seek(0)
+                    with dl_col_zip:
+                        st.download_button(
+                            label="Download ZIP (MD + PDF)",
+                            data=zip_buf.getvalue(),
+                            file_name=build_prediction_report_filename(crop, region, year, suffix="zip"),
+                            mime="application/zip",
+                            width='stretch',
+                        )
+                except Exception as exc:
+                    with dl_col_zip:
+                        st.warning(f"Could not build ZIP export: {exc}")
+
+                st.caption(
+                    "Both exports include the input parameters, prediction, temporal comparison, confidence, and model limitations."
+                )
 
             st.markdown("---")
             st.subheader("📈 Prediction Details")
@@ -871,9 +958,9 @@ The prediction uses cached training artifacts when available, falls back only wh
 📋 **Your Input Data Summary**
 
 You provided a 12-month climate sequence. Each row represents one calendar month (Jan–Dec) with 9 climate features:
-- **Temperatures**: T2M, T2M_MAX, T2M_MIN, TS, T2MDEW, T2MWET (all in °C)
+- **Temperatures**: T2M, T2M_MAX, T2M_MIN, TS (all in °C)
 - **Precipitation**: PRECTOTCORR (**mm/month** — monthly total, not daily average)
-- **Humidity**: RH2M (%), QV2M (g/kg)
+- **Humidity**: RH2M (%), QV2M (g/kg), T2MDEW (°C), T2MWET (°C)
 
 ---
 

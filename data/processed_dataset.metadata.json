@@ -1,0 +1,19 @@
+{
+  "source_files": {
+    "climate": "../../climate_data/data/combined/nasa_power_nigeria_all_1999_2023.csv",
+    "crop_yield": "../../project_data/raw_data/crop_yield/adm_crop_production_NG.csv"
+  },
+  "output_file": "../data/processed_dataset.csv",
+  "temporal_aggregation": {
+    "climate_frequency": "daily_to_monthly",
+    "PRECTOTCORR": "sum",
+    "all_other_climate_features": "mean"
+  },
+  "units": {
+    "PRECTOTCORR": "mm/month",
+    "temperature": "degC",
+    "humidity": "percent_or_g_per_kg",
+    "yield": "kg/ha"
+  },
+  "notes": "Monthly climate features are aligned to the same year-month grouping used in the model training pipeline."
+}

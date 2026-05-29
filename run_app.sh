@@ -2,7 +2,7 @@
 # Quick Start Script for Streamlit App
 # Usage: Run this script to start the Streamlit app
 
-echo "🌾 Climate Change & Food Security - Nigeria Analysis"
+echo "🌾 Climate Change on Crop Yield - Nigeria Analysis"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 
@@ -16,14 +16,14 @@ echo "✅ Python found: $(python --version)"
 echo ""
 
 # Check if virtual environment exists
-if [ ! -d "venv" ]; then
+if [ ! -d ".venv" ]; then
     echo "📦 Creating virtual environment..."
-    python -m venv venv
+    python -m venv .venv
 fi
 
 # Activate virtual environment
 echo "🔄 Activating virtual environment..."
-source venv/bin/activate 2>/dev/null || venv\Scripts\activate.bat
+source .venv/bin/activate
 
 # Install/Update dependencies
 echo "📥 Installing dependencies from requirements.txt..."
