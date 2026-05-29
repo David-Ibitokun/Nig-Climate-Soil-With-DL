@@ -10,6 +10,7 @@ from pathlib import Path
 
 import joblib
 import plotly.graph_objects as go
+import matplotlib.pyplot as plt
 
 from data_loader import apply_global_style, load_data
 from scripts.prediction_helpers import (
@@ -78,6 +79,67 @@ FEATURE_EXPLANATIONS = {
     "RH2M": "Relative humidity influences evapotranspiration and disease risk; low RH increases water loss, high RH can favor disease—both affect yield depending on context.",
     "QV2M": "Specific humidity measures absolute moisture content; low specific humidity usually signals drier air and greater water stress on plants.",
 }
+
+
+def _export_prediction_chart_png(y_pred: float, y_lower: float, y_upper: float, fig: go.Figure) -> bytes | None:
+    try:
+        return fig.to_image(format="png", engine="kaleido", scale=2)
+    except Exception:
+        try:
+            return fig.to_image(format="png", engine="kaleido", scale=1)
+        except Exception:
+            try:
+                return fig.to_image(format="png")
+            except Exception:
+                try:
+                    fig_mpl, ax = plt.subplots(figsize=(8, 4.8), dpi=200)
+                    ax.bar(["Yield"], [y_pred], color="#2E86AB", width=0.6)
+                    ax.errorbar(
+                        ["Yield"],
+                        [y_pred],
+                        yerr=[[y_pred - y_lower], [y_upper - y_pred]],
+                        fmt="none",
+                        ecolor="#A1C6D4",
+                        elinewidth=2,
+                        capsize=8,
+                    )
+                    ax.set_ylabel("Yield (kg/ha)")
+                    ax.set_title("Yield Prediction with uncertainty range")
+                    ax.grid(axis="y", alpha=0.25)
+                    fig_mpl.tight_layout()
+                    buffer = io.BytesIO()
+                    fig_mpl.savefig(buffer, format="png", bbox_inches="tight")
+                    plt.close(fig_mpl)
+                    buffer.seek(0)
+                    return buffer.getvalue()
+                except Exception:
+                    return None
+
+
+def _export_driver_chart_png(driver_display: pd.DataFrame, chart_mode: str, x_axis_title: str) -> bytes | None:
+    try:
+        fig, ax = plt.subplots(figsize=(9.5, 5.0), dpi=200)
+        values = pd.to_numeric(driver_display["Yield_Impact_kg_ha"], errors="coerce").fillna(0.0).astype(float)
+        if chart_mode == "Absolute" and "Normalized_Abs_Impact_kg_ha" in driver_display.columns:
+            abs_col = pd.to_numeric(driver_display["Normalized_Abs_Impact_kg_ha"], errors="coerce").fillna(0.0).astype(float)
+            values = abs_col
+            colors = ["#2E86AB"] * len(values)
+        else:
+            colors = ["#2E86AB" if value >= 0 else "#D1495B" for value in values]
+        features = driver_display["Feature"].tolist()
+        ax.barh(features, values, color=colors)
+        ax.axvline(0, color="#6b7280", linewidth=1)
+        ax.set_xlabel(x_axis_title)
+        ax.set_title("Feature Influence on Yield")
+        ax.grid(axis="x", alpha=0.25)
+        fig.tight_layout()
+        buffer = io.BytesIO()
+        fig.savefig(buffer, format="png", bbox_inches="tight")
+        plt.close(fig)
+        buffer.seek(0)
+        return buffer.getvalue()
+    except Exception:
+        return None
 
 
 def render():
@@ -562,17 +624,7 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
             )
             st.plotly_chart(fig, width="stretch")
             # Try to export the prediction chart as PNG for inclusion in reports
-            pred_png = None
-            try:
-                pred_png = fig.to_image(format="png", engine="kaleido", scale=2)
-            except Exception:
-                try:
-                    pred_png = fig.to_image(format="png", engine="kaleido", scale=1)
-                except Exception:
-                    try:
-                        pred_png = fig.to_image(format="png")
-                    except Exception:
-                        pred_png = None
+            pred_png = _export_prediction_chart_png(y_pred, y_lower, y_upper, fig)
 
             # Compute and display temporal comparison vs regional baseline
             historical_summary = {}
@@ -831,17 +883,7 @@ Important notes:
                 )
                 st.plotly_chart(driver_fig, width='stretch')
                 # Try to export the driver influence chart as PNG for reports
-                driver_png = None
-                try:
-                    driver_png = driver_fig.to_image(format="png", engine="kaleido", scale=2)
-                except Exception:
-                    try:
-                        driver_png = driver_fig.to_image(format="png", engine="kaleido", scale=1)
-                    except Exception:
-                        try:
-                            driver_png = driver_fig.to_image(format="png")
-                        except Exception:
-                            driver_png = None
+                driver_png = _export_driver_chart_png(driver_display, chart_mode, x_axis_title)
 
             # Visual interpretation of confidence level
             if uncertainty_pct < 10.0:
