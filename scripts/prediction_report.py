@@ -198,15 +198,7 @@ def build_prediction_report_markdown(
             elif percentile_rank <= 10:
                 parts.append("- Interpretation: this result sits in the bottom 10% of historical seasons.")
 
-    if anomalies_df is not None and not anomalies_df.empty:
-        parts.append("")
-        parts.append("## Monthly Climate Anomalies")
-        parts.append("Top deviations from the regional baseline:")
-        top_anomalies = anomalies_df.copy()
-        if "Z_Score" in top_anomalies.columns:
-            top_anomalies = top_anomalies.reindex(top_anomalies["Z_Score"].abs().sort_values(ascending=False).index)
-        top_anomalies = top_anomalies.head(6)
-        parts.append(_markdown_table(top_anomalies[[c for c in ["Feature", "Month", "User_Value", "Baseline_Mean", "Z_Score", "Anomaly_Percent"] if c in top_anomalies.columns]]))
+    # Monthly climate anomalies section removed: anomalies are no longer included in reports.
 
     if driver_df is not None and not driver_df.empty:
         parts.append("")
@@ -323,8 +315,18 @@ def _build_reportlab_table(table_lines: list[str], styles, available_width: floa
                 table_row.append(Paragraph(_markdown_inline_to_html(clean_cell), cell_style))
         table_data.append(table_row)
 
-    col_width = available_width / col_count
-    table = Table(table_data, colWidths=[col_width] * col_count, repeatRows=1)
+    # Prefer a wider column for long 'Interpretation' text when present
+    headers_lower = [h.lower() for h in headers]
+    if "interpretation" in headers_lower and col_count > 1:
+        interp_idx = headers_lower.index("interpretation")
+        interp_width = max(available_width * 0.35, available_width / col_count)
+        other_width = (available_width - interp_width) / (col_count - 1)
+        col_widths = [other_width] * col_count
+        col_widths[interp_idx] = interp_width
+    else:
+        col_widths = [available_width / col_count] * col_count
+
+    table = Table(table_data, colWidths=col_widths, repeatRows=1)
     table.setStyle(
         TableStyle(
             [
@@ -336,6 +338,9 @@ def _build_reportlab_table(table_lines: list[str], styles, available_width: floa
                 ("ROWBACKGROUNDS", (0, 1), (-1, -1), [colors.whitesmoke, colors.HexColor("#f8fafc")]),
                 ("LEFTPADDING", (0, 0), (-1, -1), 4),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                # Add extra horizontal padding for Interpretation column when present
+                ("LEFTPADDING", (interp_idx if 'interp_idx' in locals() else 0, 0), (interp_idx if 'interp_idx' in locals() else 0, -1), 8),
+                ("RIGHTPADDING", (interp_idx if 'interp_idx' in locals() else 0, 0), (interp_idx if 'interp_idx' in locals() else 0, -1), 8),
                 ("TOPPADDING", (0, 0), (-1, -1), 4),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
             ]

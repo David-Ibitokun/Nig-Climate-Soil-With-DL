@@ -77,7 +77,7 @@ Understanding these patterns is critical for explaining crop yield variability.
         fig_r = go.Figure()
         fig_r.add_trace(go.Bar(x=month_names, y=r_vals, marker_color='steelblue'))
         fig_r.update_layout(title_text='Rainfall (PRECTOTCORR)', autosize=True, margin=dict(t=40))
-        fig_r.update_yaxes(title_text='mm/day')
+        fig_r.update_yaxes(title_text='mm/month')
 
         fig_h = go.Figure()
         fig_h.add_trace(go.Scatter(x=month_names, y=h_vals, mode='lines+markers', line=dict(color='seagreen')))
@@ -119,7 +119,7 @@ Understanding these patterns is critical for explaining crop yield variability.
         def annual_feature_by_region(feature_code: str):
             fig = go.Figure()
             feature_labels = {
-                'PRECTOTCORR': ('Precipitation (mm/day)', 'steelblue'),
+                'PRECTOTCORR': ('Precipitation (mm/month)', 'steelblue'),
                 'T2M': ('Temperature (°C)', 'orangered'),
                 'RH2M': ('Relative Humidity (%)', 'seagreen'),
             }

@@ -1,0 +1,33 @@
+---
+config:
+  theme: redux
+---
+flowchart TD
+  A["Complete original dataset"]
+  A --> B["StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)<br/>(stratified by Crop, Region)"]
+
+  subgraph CV_ITER ["Cross-validation iteration(repeat 5x)"]
+    direction LR
+    B --> C["Train (4 folds)"]
+    B --> D["Held-out fold (per-fold test set)"]
+    C --> E["Per-fold training loop"]
+    E --> F["Train on Train (4 folds) with validation_split=0.1<br/>(Keras fit uses internal 10% validation)"]
+    F --> G["Update model weights"]
+    G --> H["Save fold model: models/tcn_mlp_fold_{i}.keras"]
+  end
+
+  D --> I["Per-fold test predictions"]
+  H --> I
+
+  I --> J["Ensemble: predict each test sample with all 5 fold models"]
+  J --> K["Average predictions (ensemble mean)<br/>Compute per-fold and aggregate metrics"]
+  K --> L["Evaluation & Results<br/>results saved to results/ensemble_metrics_mapes_maase_trimmed.csv"]
+
+  style A fill:#f0f0eb,stroke:#8c8c8c
+  style B fill:#fff5cc,stroke:#b08b00
+  style C fill:#c8dcf0,stroke:#6496c8
+  style D fill:#ffd7b0,stroke:#b46800
+  style F fill:#8ccca8,stroke:#3c9678
+  style J fill:#e6d6f0,stroke:#6a4ca8
+  style K fill:#b4a7e6,stroke:#6a4ca8
+  style L fill:#b4a7e6,stroke:#7844b0

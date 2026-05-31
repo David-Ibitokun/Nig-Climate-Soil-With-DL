@@ -217,7 +217,7 @@ Select your inputs and the model will provide yield predictions with confidence 
 - **Max temperature at 2m**: the hottest air temperature near the ground surface for the month (°C).
 - **Min temperature at 2m**: the coldest air temperature near the ground surface for the month (°C).
 - **Land surface temperature**: the temperature of the land itself, not the air above it (°C).
-- **Bias-corrected total precipitation**: ⚠️ **the total monthly rainfall in mm** (NOT mm/day). Sum all daily rainfall for the month to get one value per month.
+- **Bias-corrected total precipitation**: ⚠️ **the total monthly rainfall in mm (mm/month)**. Sum all daily rainfall for the month to get the monthly total; do not provide daily averages.
 - **Relative humidity at 2m**: how much moisture is in the air near the ground, compared with the maximum possible (%).
 - **Specific humidity**: the actual amount of water vapor in the air (g/kg).
 - **Dew point temperature at 2m**: the temperature at which air near the ground becomes saturated and condensation starts (°C).
@@ -228,7 +228,6 @@ Select your inputs and the model will provide yield predictions with confidence 
 1. **Temperature features** (T2M, T2M_MAX, T2M_MIN, TS): Provide the monthly average or aggregated value from daily observations (°C).
 2. **Precipitation (PRECTOTCORR)**: Provide the **monthly total** in mm. If you have daily data, sum all days in the month.
 3. **Humidity features** (RH2M, QV2M, T2MDEW, T2MWET): Provide the monthly average (% or g/kg for QV2M; °C for dew/wet-bulb temperatures).
-4. **All 12 rows**: One row per month (Jan–Dec), in order. Your sequence should represent a complete annual climate profile.
 
 **⚠️ Important**: Do not provide daily averages for monthly fields. Use monthly aggregates. If unsure, use the Download sample CSV button and open it in Excel.
             """
@@ -626,96 +625,56 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
             # Try to export the prediction chart as PNG for inclusion in reports
             pred_png = _export_prediction_chart_png(y_pred, y_lower, y_upper, fig)
 
-            # Compute and display temporal comparison vs regional baseline
+            # Temporal comparison vs historical yield baseline
             historical_summary = {}
             try:
-                regional_baseline = compute_regional_climate_baseline(df, region)
-                anomalies_df = compute_climate_anomalies(X_seq, regional_baseline)
-                
-                if not anomalies_df.empty:
-                    st.subheader("📊 How your months compare to the region")
-                    st.caption("Shows how unusual each month is compared with the region's typical climate (standard and percent difference).")
-                    
-                    with st.expander("📈 View anomalies by feature", expanded=False):
-                        # Summary stats
-                        extreme_anomalies = anomalies_df[anomalies_df['Z_Score'].abs() > 1.5]
-                        if not extreme_anomalies.empty:
-                            st.warning(
-                                f"⚠️ {len(extreme_anomalies)} month(s) look unusually different from the region's typical climate.\n"
-                                "These months may require extra attention when planning."
-                            )
-                        
-                        # Display top positive and negative anomalies
-                        top_positive = anomalies_df.nlargest(3, 'Z_Score')[['Feature', 'Month', 'User_Value', 'Baseline_Mean', 'Z_Score', 'Anomaly_Percent']]
-                        top_negative = anomalies_df.nsmallest(3, 'Z_Score')[['Feature', 'Month', 'User_Value', 'Baseline_Mean', 'Z_Score', 'Anomaly_Percent']]
-                        
-                        if not top_positive.empty:
-                            st.write("**Top 3 Positive Anomalies** (above baseline):")
-                            top_positive_display = top_positive.copy()
-                            top_positive_display['Z_Score'] = top_positive_display['Z_Score'].round(2)
-                            top_positive_display['Anomaly_Percent'] = top_positive_display['Anomaly_Percent'].round(1)
-                            top_positive_display['User_Value'] = top_positive_display['User_Value'].round(2)
-                            top_positive_display['Baseline_Mean'] = top_positive_display['Baseline_Mean'].round(2)
-                            st.dataframe(top_positive_display, hide_index=True, width='stretch')
-                        
-                        if not top_negative.empty:
-                            st.write("**Top 3 Negative Anomalies** (below baseline):")
-                            top_negative_display = top_negative.copy()
-                            top_negative_display['Z_Score'] = top_negative_display['Z_Score'].round(2)
-                            top_negative_display['Anomaly_Percent'] = top_negative_display['Anomaly_Percent'].round(1)
-                            top_negative_display['User_Value'] = top_negative_display['User_Value'].round(2)
-                            top_negative_display['Baseline_Mean'] = top_negative_display['Baseline_Mean'].round(2)
-                            st.dataframe(top_negative_display, hide_index=True, width='stretch')
+                hist = compute_historical_yield_baseline(df, region, crop)
+                if hist.get('count', 0) > 0 and hist.get('mean') is not None:
+                    # Percent difference and z-score
+                    pct_diff = (y_pred - hist['mean']) / max(hist['mean'], EPSILON) * 100.0
+                    z_score = (y_pred - hist['mean']) / hist['std'] if hist['std'] and hist['std'] > 0 else None
+                    # Percentile rank among historical yields
+                    ranks = hist.get('yields', [])
+                    if ranks:
+                        rank_pct = float(np.sum(np.array(ranks) < y_pred) / len(ranks) * 100.0)
+                    else:
+                        rank_pct = None
 
-                    # Temporal comparison vs historical yield baseline
-                    try:
-                        hist = compute_historical_yield_baseline(df, region, crop)
-                        if hist.get('count', 0) > 0 and hist.get('mean') is not None:
-                            # Percent difference and z-score
-                            pct_diff = (y_pred - hist['mean']) / max(hist['mean'], EPSILON) * 100.0
-                            z_score = (y_pred - hist['mean']) / hist['std'] if hist['std'] and hist['std'] > 0 else None
-                            # Percentile rank among historical yields
-                            ranks = hist.get('yields', [])
-                            if ranks:
-                                rank_pct = float(np.sum(np.array(ranks) < y_pred) / len(ranks) * 100.0)
-                            else:
-                                rank_pct = None
-
-                            st.subheader("📅 Comparison vs Historical Yield")
-                            if rank_pct is not None:
-                                # Simple human phrasing
-                                if rank_pct >= 90:
-                                    rank_text = f"(Top {100 - int(rank_pct)}% historically)"
-                                elif rank_pct <= 10:
-                                    rank_text = f"(Bottom {int(rank_pct)}% historically)"
-                                else:
-                                    rank_text = f"(Percentile {rank_pct:.0f})"
-                            else:
-                                rank_text = ""
-
-                            pct_label = f"{pct_diff:+.0f}% vs historical mean"
-                            if z_score is not None:
-                                z_label = f"Z = {z_score:.2f}"
-                            else:
-                                z_label = "Z = N/A"
-
-                            col_a, col_b = st.columns([2, 3])
-                            with col_a:
-                                st.metric("Historical mean yield", f"{hist['mean']:.0f} kg/ha", delta=None)
-                            with col_b:
-                                st.markdown(f"**Prediction vs historical:** {pct_label} — {z_label} {rank_text}")
-                            historical_summary = {
-                                "mean": float(hist.get("mean", 0.0)),
-                                "std": float(hist.get("std", 0.0)),
-                                "count": int(hist.get("count", 0)),
-                                "pct_diff": float(pct_diff),
-                                "z_score": float(z_score) if z_score is not None else None,
-                                "percentile_rank": float(rank_pct) if rank_pct is not None else None,
-                            }
+                    st.subheader("📅 Comparison vs Historical Yield")
+                    if rank_pct is not None:
+                        # Simple human phrasing
+                        if rank_pct >= 90:
+                            rank_text = f"(Top {100 - int(rank_pct)}% historically)"
+                        elif rank_pct <= 10:
+                            rank_text = f"(Bottom {int(rank_pct)}% historically)"
                         else:
-                            st.info("Historical yield baseline not available for this region/crop.")
-                    except Exception as e:
-                        st.warning(f"Could not compute historical yield comparison: {e}")
+                            rank_text = f"(Percentile {rank_pct:.0f})"
+                    else:
+                        rank_text = ""
+
+                    pct_label = f"{pct_diff:+.0f}% vs historical mean"
+                    if z_score is not None:
+                        z_label = f"Z = {z_score:.2f}"
+                    else:
+                        z_label = "Z = N/A"
+
+                    col_a, col_b = st.columns([2, 3])
+                    with col_a:
+                        st.metric("Historical mean yield", f"{hist['mean']:.0f} kg/ha", delta=None)
+                    with col_b:
+                        st.markdown(f"**Prediction vs historical:** {pct_label} — {z_label} {rank_text}")
+                    historical_summary = {
+                        "mean": float(hist.get("mean", 0.0)),
+                        "std": float(hist.get("std", 0.0)),
+                        "count": int(hist.get("count", 0)),
+                        "pct_diff": float(pct_diff),
+                        "z_score": float(z_score) if z_score is not None else None,
+                        "percentile_rank": float(rank_pct) if rank_pct is not None else None,
+                    }
+                else:
+                    st.info("Historical yield baseline not available for this region/crop.")
+            except Exception as e:
+                st.warning(f"Could not compute historical yield comparison: {e}")
             except Exception as e:
                 st.warning(f"Could not compute climate anomalies: {e}")
 
@@ -744,21 +703,22 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
                 with st.expander("🛈 Explainability guide — what each column means", expanded=False):
                     st.markdown(
                         """
-- **Baseline_Mean**: The climatology value for that feature (median across the processed dataset months), shown in raw units (e.g., mm/month, °C). This is the reference we use when "neutralizing" a feature.
-- **Baseline (model input)**: The same climatology values but scaled to the model's feature space; used internally when re-evaluating the model.
-- **User_Mean**: The mean of the user's monthly sequence for the feature (raw units).
-- **User_vs_Baseline_Delta**: `User_Mean - Baseline_Mean`. Positive means the user's value is above climatology; negative means below.
-- **Yield_Impact_kg_ha**: Change in predicted yield (kg/ha) when the feature is replaced by the baseline (calculated as `base_yield - perturbed_yield`). Positive means the user's feature values increased predicted yield relative to climatology.
-- **Abs_Impact_kg_ha**: Absolute magnitude of the impact; used for ranking the most influential features.
-- **Direction**: Simple sign label: `Positive` if `Yield_Impact_kg_ha >= 0`, otherwise `Negative`.
-- **Interpretation**: A short, human-readable explanation of why that feature may increase or decrease yield in this context.
+- **Rank**: Importance rank (1 = most influential) sorted by absolute impact.
+- **Feature**: Short feature name (e.g., `PRECTOTCORR`).
+- **Parameter**: Human-friendly label for the feature.
+- **User_Mean**: Mean of the user's 12-month input sequence for the feature (raw units).
+- **Baseline_Mean**: Typical climatology value from the processed dataset (raw units) used to "neutralize" the feature.
+- **User_vs_Baseline_Delta**: `User_Mean - Baseline_Mean` (positive = above climatology).
+- **Yield_Impact_kg_ha**: Raw model-derived change in predicted yield (kg/ha) when that feature is set to climatology: `base_yield - perturbed_yield`.
+- **Normalized_Impact_kg_ha**: When present, a rescaled version of `Yield_Impact_kg_ha` adjusted so per-feature impacts better match the ensemble's total predicted change. The code applies `factor = total_delta_expected / sum(Yield_Impact_kg_ha)` when possible and computes `Normalized_Impact_kg_ha = Yield_Impact_kg_ha * factor`.
+- **Interpretation**: Short, human-readable explanation of the likely agronomic effect.
 
-**Method**: This app uses a leave-one-feature-out sensitivity test — for each feature we replace the user's monthly profile with the climatology baseline (scaled for the model), re-run the ensemble, and compute the yield difference. This is fast and input-driven and does not rely on precomputed SHAP files.
+Notes:
+- These values are produced by a leave-one-feature-out sensitivity test (replace one feature with climatology, re-run ensemble, measure yield change).
+- Use `Yield_Impact_kg_ha` for raw sensitivity checks; use `Normalized_Impact_kg_ha` for an additive breakdown that aligns with the ensemble's total delta.
+Use `Yield_Impact_kg_ha` for raw sensitivity checks and `Normalized_Impact_kg_ha` when you need an additive breakdown that matches the ensemble's total delta. These values are model-based what‑if attributions, useful for ranking and interpretation but not definitive causal proof.
 
-**Units (typical)**:
-- `PRECTOTCORR` = **mm/month** (total rainfall for the month, not daily average)
-- Temperatures = °C
-- Humidity = % (RH2M) or g/kg (QV2M)
+Units (typical): `PRECTOTCORR` = mm/month, temperatures = °C, `RH2M` = %.
                         """
                     )
 
@@ -919,7 +879,7 @@ Important notes:
                     sequence_df=sequence_df,
                     driver_df=driver_display,
                     historical_summary=historical_summary,
-                    anomalies_df=anomalies_df if 'anomalies_df' in locals() else None,
+                    anomalies_df=None,
                     images=images if images else None,
                 )
             except Exception as exc:

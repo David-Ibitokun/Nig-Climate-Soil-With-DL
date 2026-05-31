@@ -12,7 +12,8 @@
   </g>
 
   <line x1="340" y1="64" x2="340" y2="92" marker-end="url(#arrow)" style="fill:none;stroke:rgb(120, 120, 120);stroke-width:1.5px;"/>
-  <text x="380" y="80" dominant-baseline="central" style="fill:rgb(100, 100, 100);font-size:12px;">StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED) — create 5 folds</text>
+  <text x="380" y="72" dominant-baseline="central" style="fill:rgb(100, 100, 100);font-size:12px;">StratifiedKFold(n_splits=5, shuffle=True, random_state=SEED)</text>
+  <text x="380" y="88" dominant-baseline="central" style="fill:rgb(100, 100, 100);font-size:11px;">— create 5 folds (stratified by <tspan font-weight="bold">Crop, Region</tspan>)</text>
 
   <!-- Cross-validation row: training (4 folds) + held-out fold -->
   <g>

@@ -38,14 +38,16 @@ Nine monthly climate features were used as model inputs (January through Decembe
 
 All features were standardized to zero mean and unit variance using a fitted `StandardScaler` on the training set. Yields were log-transformed (with small epsilon offset to handle zeros) to improve model stability and reduce skewness. The log-transform was inverted during post-processing to report predictions in familiar units (kg/ha).
 
-### 4.1.3 Train/Validation/Test Split
+### 4.1.3 Cross-validation and evaluation split
 
-The dataset was split chronologically and spatially to reflect real-world prediction scenarios:
-- **Training set:** 60% of samples (historical data, mixed regions and years)
-- **Validation set:** 20% of samples (used for hyperparameter tuning and early stopping)
-- **Test set:** 20% of samples (held-out for final performance evaluation, not seen during training)
+The training notebook uses a stratified 5-fold cross-validation procedure rather than a single chronological 60/20/20 split. Key points:
 
-This stratified, time-aware split prevents data leakage and ensures the model generalizes to unseen seasons and locations.
+- **Stratified 5-fold CV:** data are partitioned into five folds stratified by the `(crop, region)` combination so that each fold preserves the joint distribution of crop and region.
+- **Per-fold workflow:** for each fold, one fold is held out as the fold-level test set; the remaining four folds are used for training. During model.fit a `validation_split=0.1` is applied on the training partition to create an internal validation set for early stopping and learning-rate scheduling.
+- **Why this choice:** stratified CV yields more robust estimates of out-of-sample performance for small and imbalanced datasets, and ensures that each crop–region combination is evaluated across folds.
+- **Final evaluation / ensembling:** each fold's test set is predicted by all fold models and the predictions averaged (ensemble mean) to produce the final point estimates. Performance metrics reported in the chapter are aggregated across all fold-level test predictions.
+
+This approach provides a robust, ensemble-based assessment of generalization without relying on a single static chronological holdout.
 
 ### 4.1.4 Model Architecture & Ensemble Setup
 
@@ -80,11 +82,12 @@ All models were trained for up to 100 epochs with early stopping based on valida
 
 ---
 
-## 4.2 Prediction Performance
+
+### 4.2 Prediction Performance
 
 ### 4.2.1 Aggregate Ensemble Performance
 
-The ensemble model was evaluated on the held-out test set using standard regression metrics. **[Table 4.2]** summarizes overall performance:
+The ensemble model is evaluated via the stratified 5‑fold cross-validation described above. Metrics are computed on each fold's held-out test partition and then aggregated; ensemble predictions for a given test sample are produced by averaging predictions from the five fold models. **[Table 4.2]** summarizes aggregate performance across all fold-level test samples:
 
 | Metric | Value | Interpretation |
 |--------|-------|---|
