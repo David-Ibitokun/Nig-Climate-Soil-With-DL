@@ -362,58 +362,57 @@ Select your inputs and the model will provide yield predictions with confidence 
 
     # Prediction (real path)
     if st.session_state.get('generated_prediction', False):
-        st.info("Loading models and making the prediction. This may take a few seconds.")
+        with st.spinner("Loading models and making the prediction. This may take a few seconds."):
+            try:
+                import tensorflow as tf
+                from sklearn.preprocessing import StandardScaler
+            except Exception as exc:
+                st.error(f"Required ML libraries not available: {exc}")
+                return
 
-        try:
-            import tensorflow as tf
-            from sklearn.preprocessing import StandardScaler
-        except Exception as exc:
-            st.error(f"Required ML libraries not available: {exc}")
-            return
+            try:
+                artifacts = load_prediction_artifacts()
+                loaded_models = load_ensemble_models()
+            except Exception as exc:
+                st.error(f"Prediction setup failed: {exc}")
+                st.code(traceback.format_exc())
+                return
 
-        try:
-            artifacts = load_prediction_artifacts()
-            loaded_models = load_ensemble_models()
-        except Exception as exc:
-            st.error(f"Prediction setup failed: {exc}")
-            st.code(traceback.format_exc())
-            return
+            df = processed_dataset.copy() if not processed_dataset.empty else pd.DataFrame()
 
-        df = processed_dataset.copy() if not processed_dataset.empty else pd.DataFrame()
+            x_scaler = artifacts.get("x_scaler")
+            year_scaler = artifacts.get("year_scaler")
 
-        x_scaler = artifacts.get("x_scaler")
-        year_scaler = artifacts.get("year_scaler")
+            if x_scaler is None:
+                if not df.empty:
+                    n_feat = len(CLIMATE_FEATURES)
+                    X_all = np.zeros((df.shape[0], 12, n_feat), dtype=np.float32)
+                    for i, feat in enumerate(CLIMATE_FEATURES):
+                        for m in range(1, 13):
+                            col = f"{feat}_m{m}"
+                            if col in df.columns:
+                                X_all[:, m - 1, i] = df[col].fillna(df[col].median()).values
+                    x_scaler = StandardScaler()
+                    x_scaler.fit(X_all.reshape(-1, n_feat))
+                st.warning("Using live-fit feature scaling because x_scaler.pkl is not available.")
 
-        if x_scaler is None:
-            if not df.empty:
-                n_feat = len(CLIMATE_FEATURES)
-                X_all = np.zeros((df.shape[0], 12, n_feat), dtype=np.float32)
-                for i, feat in enumerate(CLIMATE_FEATURES):
-                    for m in range(1, 13):
-                        col = f"{feat}_m{m}"
-                        if col in df.columns:
-                            X_all[:, m - 1, i] = df[col].fillna(df[col].median()).values
-                x_scaler = StandardScaler()
-                x_scaler.fit(X_all.reshape(-1, n_feat))
-            st.warning("Using live-fit feature scaling because x_scaler.pkl is not available.")
+            if year_scaler is None:
+                if not df.empty:
+                    yr_all = build_year_features_arr(df["Year"].values.astype(np.float32))
+                    year_scaler = StandardScaler()
+                    year_scaler.fit(yr_all)
+                st.warning("Using live-fit year scaling because year_scaler.pkl is not available.")
 
-        if year_scaler is None:
-            if not df.empty:
-                yr_all = build_year_features_arr(df["Year"].values.astype(np.float32))
-                year_scaler = StandardScaler()
-                year_scaler.fit(yr_all)
-            st.warning("Using live-fit year scaling because year_scaler.pkl is not available.")
+            if x_scaler is not None:
+                X_in = x_scaler.transform(X_seq.reshape(-1, len(CLIMATE_FEATURES))).reshape(X_seq.shape).astype(np.float32)
+                baseline_in = x_scaler.transform(baseline_seq.reshape(-1, len(CLIMATE_FEATURES))).reshape(baseline_seq.shape).astype(np.float32)
+            else:
+                X_in = X_seq.astype(np.float32)
+                baseline_in = baseline_seq.astype(np.float32)
 
-        if x_scaler is not None:
-            X_in = x_scaler.transform(X_seq.reshape(-1, len(CLIMATE_FEATURES))).reshape(X_seq.shape).astype(np.float32)
-            baseline_in = x_scaler.transform(baseline_seq.reshape(-1, len(CLIMATE_FEATURES))).reshape(baseline_seq.shape).astype(np.float32)
-        else:
-            X_in = X_seq.astype(np.float32)
-            baseline_in = baseline_seq.astype(np.float32)
-
-        yr_in = build_year_features_arr(np.array([year], dtype=np.float32))
-        if year_scaler is not None:
-            yr_in = year_scaler.transform(yr_in).astype(np.float32)
+            yr_in = build_year_features_arr(np.array([year], dtype=np.float32))
+            if year_scaler is not None:
+                yr_in = year_scaler.transform(yr_in).astype(np.float32)
 
         try:
             p_idx = CLIMATE_FEATURES.index("PRECTOTCORR")
@@ -658,11 +657,34 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
                     else:
                         z_label = "Z = N/A"
 
+                    rank_label = rank_text if rank_text else "Historical percentile not available"
+                    if rank_pct is not None:
+                        rank_meaning = f"means this predicted value is better than about {rank_pct:.0f}% of past observed yields."
+                    else:
+                        rank_meaning = "means there was not enough historical data to compute percentile ranking."
+
+                    with st.expander("ℹ️ How to interpret this comparison", expanded=False):
+                        st.markdown(
+                            f"""
+- **Comparison vs Historical Yield** tells you how this prediction compares to past results for the same crop and region.
+- **Prediction vs historical: {pct_label}** means the model expects yield to be above or below the historical average by that percentage.
+- **{z_label}** shows how far the prediction is from the long-term mean in standard-deviation units (near 0 means close to normal).
+- **{rank_label}** {rank_meaning}
+                            """
+                        )
+
                     col_a, col_b = st.columns([2, 3])
                     with col_a:
                         st.metric("Historical mean yield", f"{hist['mean']:.0f} kg/ha", delta=None)
                     with col_b:
-                        st.markdown(f"**Prediction vs historical:** {pct_label} — {z_label} {rank_text}")
+                        st.markdown(
+                            f"""
+<p style=\"font-size:1.15rem; line-height:1.6; margin:0;\">
+<strong>Prediction vs historical:</strong> {pct_label} — {z_label} {rank_text}
+</p>
+""",
+                            unsafe_allow_html=True,
+                        )
                     historical_summary = {
                         "mean": float(hist.get("mean", 0.0)),
                         "std": float(hist.get("std", 0.0)),
@@ -675,8 +697,6 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
                     st.info("Historical yield baseline not available for this region/crop.")
             except Exception as e:
                 st.warning(f"Could not compute historical yield comparison: {e}")
-            except Exception as e:
-                st.warning(f"Could not compute climate anomalies: {e}")
 
             # Agronomic risk details and Climate Stress Scorecard removed — model not trained
             # to provide learned agronomic risk attributions. We keep driver sensitivity
