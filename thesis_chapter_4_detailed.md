@@ -40,10 +40,10 @@ All features were standardized to zero mean and unit variance using a fitted `St
 
 ### 4.1.3 Cross-validation and evaluation split
 
-The training notebook uses a stratified 5-fold cross-validation procedure rather than a single chronological 60/20/20 split. Key points:
+The training notebook uses a stratified 5-fold cross-validation procedure rather than a single chronological split. Key points:
 
 - **Stratified 5-fold CV:** data are partitioned into five folds stratified by the `(crop, region)` combination so that each fold preserves the joint distribution of crop and region.
-- **Per-fold workflow:** for each fold, one fold is held out as the fold-level test set; the remaining four folds are used for training. During model.fit a `validation_split=0.1` is applied on the training partition to create an internal validation set for early stopping and learning-rate scheduling.
+- **Per-fold workflow:** for each fold, one fold is held out as the fold-level test set; the remaining four folds are used for training. During model.fit, a `validation_split=0.1` is applied on the training partition to create an internal validation set for monitoring (displayed in training logs only; not used for stopping criteria).
 - **Why this choice:** stratified CV yields more robust estimates of out-of-sample performance for small and imbalanced datasets, and ensures that each crop–region combination is evaluated across folds.
 - **Final evaluation / ensembling:** each fold's test set is predicted by all fold models and the predictions averaged (ensemble mean) to produce the final point estimates. Performance metrics reported in the chapter are aggregated across all fold-level test predictions.
 
@@ -53,32 +53,41 @@ This approach provides a robust, ensemble-based assessment of generalization wit
 
 The ensemble comprised 5 independent TCN-MLP models trained via k-fold cross-validation (k=5):
 
-- **TCN component:** 1D convolutional layers with dilated convolutions to capture temporal patterns across the 12-month sequence. Filter sizes: [64, 128, 256]; kernel size: 3; dilation factors: 1, 2, 4.
-- **MLP component:** Dense layers (256, 128, 64 units) with ReLU activation and 0.3 dropout to prevent overfitting. Output layer: single neuron for yield prediction.
+- **TCN component:** 1D convolutional layers with dilated convolutions to capture temporal patterns across the 12-month sequence. Filter sizes: 48 → 48 → 48 → 32 (final projection); kernel size: 3; dilation factors: 1, 2, 4 (across three TCN blocks), with causal padding to prevent lookahead bias.
+- **MLP component:** Dense layers (40, 20 units) with ReLU activation and 0.12 dropout to prevent overfitting. Output layer: single neuron for yield prediction in log-space.
 - **Inputs:** 
-  - Climate sequence (1, 12, 9) — 12 months × 9 features
-  - Region embedding (categorical, learned)
-  - Crop embedding (categorical, learned)
-  - Year feature (scalar, standardized)
+  - Climate sequence (12, 9) — 12 months × 9 features (standardized)
+  - Region embedding (4 dimensions, learned from categorical input)
+  - Crop embedding (4 dimensions, learned from categorical input)
+  - Year features (3-dimensional: normalized year, sin, cos for cyclic encoding)
 
-- **Loss function:** Mean Squared Error (MSE) on log-transformed yields
-- **Optimizer:** Adam (learning rate 0.001)
-- **Regularization:** L2 (weight decay 0.0001), dropout 0.3, early stopping (patience 10 epochs)
-- **Ensemble aggregation:** Mean across 5 folds for point estimate; standard deviation for uncertainty
+- **Loss function:** Huber loss (delta=0.35) on log-transformed yields, robust to outliers
+- **Optimizer:** AdamW (learning rate 3e-4, weight decay 3e-4, gradient clipping norm 1.0)
+- **Regularization:** L2 penalty (1e-3) on convolutional and dense kernels; dropout rate 0.12; batch normalization with momentum 0.95
+- **Learning rate schedule:** ReduceLROnPlateau (monitor training loss, factor 0.5, patience 15 epochs, min LR 1e-5)
+- **Ensemble aggregation:** Mean across 5 folds for point estimate; standard deviation across folds for uncertainty quantification
 
 ### 4.1.5 Training & Hyperparameter Selection
 
-All models were trained for up to 100 epochs with early stopping based on validation loss. Hyperparameters were selected via grid search on the validation set:
+All models were trained for a maximum of 160 epochs with dynamic learning rate reduction based on training loss plateau. Hyperparameters were fixed based on small-data best practices and preliminary tuning:
 
-| Hyperparameter | Range Explored | Selected Value | Rationale |
-|---|---|---|---|
-| TCN filters | [32, 64, 128, 256] | [64, 128, 256] | Balance between expressiveness and overfitting |
-| TCN kernel size | [2, 3, 5] | 3 | Suitable for short temporal sequences |
-| Dilation factors | [1,2,4], [1,2,4,8] | [1, 2, 4] | Sufficient receptive field without excessive params |
-| MLP layers | [1, 2, 3] | 3 | Sufficient capacity for interaction modeling |
-| MLP units | [64, 128, 256] | [256, 128, 64] | Decreasing width for regularization |
-| Dropout rate | [0.2, 0.3, 0.5] | 0.3 | Balance variance reduction and bias |
-| Learning rate | [0.0001, 0.001, 0.01] | 0.001 | Standard for Adam optimizer |
+| Hyperparameter | Selected Value | Justification |
+|---|---|---|
+| TCN filter sizes | 48, 48, 48, 32 | Lightweight architecture suits small dataset (≈600 samples); maintains receptive field across dilations |
+| TCN kernel size | 3 | Captures 3-month climate patterns (e.g., rainfall-temperature interaction windows) |
+| TCN dilation factors | [1, 2, 4] | Exponential dilation provides multi-scale temporal coverage without excessive parameters; receptive field ≈ 12 months |
+| TCN output projection | 32 (1×1 conv) | Bottleneck reduces overfitting before MLP |
+| MLP layer widths | [40, 20] | Tapered architecture: 40 units for feature interaction, 20 for refinement |
+| Dropout rate | 0.12 | Moderate regularization; higher rates cause underfitting on small datasets |
+| L2 regularization | 1e-3 on kernels | Penalizes large weights; balances with dropout |
+| Weight decay (optimizer) | 3e-4 | Additional L2 regularization on optimizer state |
+| Learning rate | 3e-4 | Conservative for small dataset; allows stable training without large fluctuations |
+| Loss function | Huber (delta=0.35) | Robust to outliers; better than MSE for yield data with occasional measurement errors |
+| Batch size | 32 | Preserves batch statistics for BatchNorm; ~20% of training set per fold |
+| Epochs | 160 | Sufficient for convergence; ReduceLROnPlateau prevents overfitting |
+| Learning rate schedule | ReduceLROnPlateau | Reduces LR by 0.5× when train loss plateaus for 15 epochs; min LR floor 1e-5 |
+
+**Validation Strategy:** No separate validation set was held out. Instead, `validation_split=0.1` on the training partition of each fold creates an internal validation set for monitoring (though this is not used for stopping criteria). The ReduceLROnPlateau callback monitors training loss directly, adapting the learning rate during training. This conservative approach prevents overfitting while allowing the model to train fully across epochs.
 
 ---
 

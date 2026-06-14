@@ -138,7 +138,7 @@ Navigate through the sidebar to explore predictions, data, model architecture, e
         """
 This project predicts crop yields from 12-month climate sequences using a TCN–MLP ensemble trained with 5-fold cross-validation.
 
- **Data:** Processed historical climate sequences (PRECTOTCORR = monthly total precipitation, mm/month) and observed yields are used to train the model; the processed dataset is available under `data/processed_dataset.csv`.
+ **Data:** Processed historical climate sequences (PRECTOTCORR = monthly total precipitation, mm/month) and observed yields are used to train the model.
 
 Use the sidebar to navigate to **Make Prediction**, **Data Explorer**, **Model Architecture**, and **Model Evaluation** pages for deeper analysis and downloadable artifacts.
         """
