@@ -18,9 +18,7 @@ from scripts.prediction_helpers import (
     build_feature_sensitivity_summary,
     build_global_climatology_sequence,
     build_year_features_arr,
-    compute_climate_anomalies,
     compute_historical_yield_baseline,
-    compute_regional_climate_baseline,
     get_feature_explanation,
     get_month_labels,
     load_ensemble_models,
@@ -76,7 +74,7 @@ FEATURE_EXPLANATIONS = {
     "TS": "Land surface temperature reflects canopy and soil heating; extreme values can indicate stress that reduces yield.",
     "T2MDEW": "Dew point indicates air moisture; low dew points mean drier air and higher evapotranspiration, which can reduce yields under water stress.",
     "T2MWET": "Wet-bulb temperature captures combined heat and humidity; high wet-bulb increases heat stress severity under humid conditions.",
-    "RH2M": "Relative humidity influences evapotranspiration and disease risk; low RH increases water loss, high RH can favor disease—both affect yield depending on context.",
+    "RH2M": "Relative humidity influences evapotranspiration and disease risk; low RH increases water loss, high RH can favor disease both affect yield depending on context.",
     "QV2M": "Specific humidity measures absolute moisture content; low specific humidity usually signals drier air and greater water stress on plants.",
 }
 
@@ -97,7 +95,7 @@ def _export_prediction_chart_png(y_pred: float, y_lower: float, y_upper: float, 
                     ax.errorbar(
                         ["Yield"],
                         [y_pred],
-                        yerr=[[y_pred - y_lower], [y_upper - y_pred]],
+                        yerr=np.array([[y_pred - y_lower], [y_upper - y_pred]]),  # <-- Cleaner array passing
                         fmt="none",
                         ecolor="#A1C6D4",
                         elinewidth=2,
@@ -285,7 +283,7 @@ Select your inputs and the model will provide yield predictions with confidence 
         st.info(
             "CSV format requirements: the file must contain exactly these 9 columns (headers):\n"
             "`T2M,T2M_MAX,T2M_MIN,TS,T2MDEW,T2MWET,PRECTOTCORR,RH2M,QV2M` and exactly 12 rows (one per month).\n"
-            "Do NOT include a separate leading 'Month' column — if your file has month labels, remove that column so the nine climate feature columns are the CSV headers.\n"
+            "Do NOT include a separate leading 'Month' column if your file has month labels, remove that column so the nine climate feature columns are the CSV headers.\n"
             "You can use the provided sample `test.csv` as a reference."
         )
         uploaded = st.file_uploader("Upload CSV with 12 rows and 9 climate columns", type=["csv"])
@@ -507,6 +505,13 @@ Select your inputs and the model will provide yield predictions with confidence 
             y_pred = max(np.exp(y_log_pred) - EPSILON, 0.0)
             y_lower = max(np.exp(y_log_lower) - EPSILON, 0.0)
             y_upper = max(np.exp(y_log_upper) - EPSILON, 0.0)
+            
+            # --- NEW: Calculate individual model predictions ---
+            individual_preds = []
+            for p_norm in preds_norm:
+                p_log = p_norm[0] * crop_std + crop_mean
+                p_raw = max(np.exp(p_log) - EPSILON, 0.0)
+                individual_preds.append(float(p_raw))
 
             half_width = (y_upper - y_lower) / 2.0
             uncertainty_pct = (half_width / max(y_pred, EPSILON)) * 100.0
@@ -560,19 +565,19 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
             # 2. Model Confidence (dynamic, intuitive)
             if model_confidence >= 90:
                 confidence_label = "High Confidence 🟢"
-                confidence_interpretation = "Models strongly agree — high reliability"
+                confidence_interpretation = "Models strongly agree high reliability"
                 delta_color = "normal"
             elif model_confidence >= 75:
                 confidence_label = "Good Confidence 🟡"
-                confidence_interpretation = "Good agreement — suitable for planning"
+                confidence_interpretation = "Good agreement suitable for planning"
                 delta_color = "normal"
             elif model_confidence >= 60:
                 confidence_label = "Moderate Confidence 🟠"
-                confidence_interpretation = "Moderate disagreement — use with caution"
+                confidence_interpretation = "Moderate disagreement use with caution"
                 delta_color = "off"
             else:
                 confidence_label = "Low Confidence 🔴"
-                confidence_interpretation = "High disagreement — seek additional data"
+                confidence_interpretation = "High disagreement seek additional data"
                 delta_color = "inverse"
 
             st.metric(
@@ -603,17 +608,34 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
             )
 
             fig = go.Figure()
-            fig.add_trace(go.Bar(x=["Yield"], y=[y_pred], name="Point Estimate", marker_color="#2E86AB"))
+            # 1. Add the Point Estimate Bar
+            fig.add_trace(go.Bar(
+                x=["Yield"], 
+                y=[y_pred], 
+                name="Point Estimate", 
+                marker_color="#2E86AB"
+            ))
+
+            # 2. Add the Corrected 95% CI Error Bar
             fig.add_trace(
                 go.Scatter(
                     x=["Yield"],
-                    y=[y_upper],
-                    error_y=dict(type="data", array=[y_upper - y_lower], visible=True),
+                    y=[y_pred],  # <-- FIX: Center the point on the Point Estimate, not y_upper
+                    error_y=dict(
+                        type="data",
+                        symmetric=False,  # <-- FIX: Set to False for asymmetric log-inverted bounds
+                        array=[y_upper - y_pred],  # Distance from center to top cap
+                        arrayminus=[y_pred - y_lower],  # Distance from center to bottom cap
+                        visible=True,
+                        thickness=2,
+                        width=10
+                    ),
                     mode="markers",
-                    marker_color="#A1C6D4",
+                    marker=dict(color="#A1C6D4", size=8),
                     showlegend=False,
                 )
             )
+
             fig.update_layout(
                 title="Yield Prediction with uncertainty range",
                 yaxis_title="Yield (kg/ha)",
@@ -621,6 +643,37 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
                 height=420,
             )
             st.plotly_chart(fig, width="stretch")
+            
+            # Compact summary
+            st.subheader("🤖 Ensemble Members Breakdown")
+
+            # Show summary metrics
+            col1, col2 = st.columns(2)
+            with col1:
+                st.metric("Ensemble Mean", f"{y_pred:,.2f} kg/ha")
+            with col2:
+                st.metric("Model Agreement (Std Dev)", f"{np.std(individual_preds):,.2f} kg/ha")
+
+            # Expandable section for full details
+            with st.expander(" View Individual Fold Predictions", expanded=True):
+                # Table with full precision
+                fold_df = pd.DataFrame({
+                    "Fold Number": range(1, len(individual_preds) + 1),
+                    "Yield Prediction (kg/ha)": individual_preds,
+                    "Difference from Mean": [v - y_pred for v in individual_preds],
+                    "Percentage Difference": [((v - y_pred)/y_pred)*100 for v in individual_preds]
+                })
+                
+                st.dataframe(
+                    fold_df.style.format({
+                        "Yield Prediction (kg/ha)": "{:,.2f}",
+                        "Difference from Mean": "{:+,.2f}",
+                        "Percentage Difference": "{:+.2f}%"
+                    }),
+                    width='stretch',
+                    hide_index=True
+                )
+            
             # Try to export the prediction chart as PNG for inclusion in reports
             pred_png = _export_prediction_chart_png(y_pred, y_lower, y_upper, fig)
 
@@ -677,14 +730,30 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
                     with col_a:
                         st.metric("Historical mean yield", f"{hist['mean']:.0f} kg/ha", delta=None)
                     with col_b:
+                                        # Format the percentile rank with proper ordinal suffix (e.g., 92nd)
+                        if rank_pct is not None:
+                            rank_int = int(rank_pct)
+                            # Calculate ordinal suffix (st, nd, rd, th)
+                            if 10 <= rank_int % 100 <= 20:
+                                suffix = 'th'
+                            else:
+                                suffix = {1: 'st', 2: 'nd', 3: 'rd'}.get(rank_int % 10, 'th')
+                            
+                            percentile_line = f"Percentile Rank: {rank_int}{suffix} percentile {rank_text}"
+                        else:
+                            percentile_line = "Percentile Rank: N/A"
+
+                        # Render the updated HTML with a line break (<br>)
                         st.markdown(
                             f"""
-<p style=\"font-size:1.15rem; line-height:1.6; margin:0;\">
-<strong>Prediction vs historical:</strong> {pct_label} — {z_label} {rank_text}
-</p>
-""",
-                            unsafe_allow_html=True,
-                        )
+        <p style="font-size:1.15rem; line-height:1.6; margin:0;">
+        <strong>Prediction vs historical: </strong> {pct_label} {z_label}<br>
+        <strong>{percentile_line}</strong>
+        </p>
+        """,
+        unsafe_allow_html=True,
+        )
+                        
                     historical_summary = {
                         "mean": float(hist.get("mean", 0.0)),
                         "std": float(hist.get("std", 0.0)),
@@ -720,7 +789,7 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
                     "We temporarily replace one feature at a time with its typical value to see how the prediction changes. Use these values to see which factors matter most."
                 )
 
-                with st.expander("🛈 Explainability guide — what each column means", expanded=False):
+                with st.expander("🛈 Explainability guide (what each column means)", expanded=False):
                     st.markdown(
                         """
 - **Rank**: Importance rank (1 = most influential) sorted by absolute impact.
@@ -731,7 +800,6 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
 - **User_vs_Baseline_Delta**: `User_Mean - Baseline_Mean` (positive = above climatology).
 - **Yield_Impact_kg_ha**: Raw model-derived change in predicted yield (kg/ha) when that feature is set to climatology: `base_yield - perturbed_yield`.
 - **Normalized_Impact_kg_ha**: When present, a rescaled version of `Yield_Impact_kg_ha` adjusted so per-feature impacts better match the ensemble's total predicted change. The code applies `factor = total_delta_expected / sum(Yield_Impact_kg_ha)` when possible and computes `Normalized_Impact_kg_ha = Yield_Impact_kg_ha * factor`.
-- **Interpretation**: Short, human-readable explanation of the likely agronomic effect.
 
 Notes:
 - These values are produced by a leave-one-feature-out sensitivity test (replace one feature with climatology, re-run ensemble, measure yield change).
@@ -868,13 +936,13 @@ Important notes:
             # Visual interpretation of confidence level
             if uncertainty_pct < 10.0:
                 uncertainty_band = "Low"
-                st.success(f"✓ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — models largely agree")
+                st.success(f"✓ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) models largely agree")
             elif uncertainty_pct < 25.0:
                 uncertainty_band = "Medium"
-                st.info(f"ℹ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — moderate disagreement between models")
+                st.info(f"ℹ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) moderate disagreement between models")
             else:
                 uncertainty_band = "High"
-                st.warning(f"⚠ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) — high disagreement; interpret with caution")
+                st.warning(f"⚠ Uncertainty band: {uncertainty_band} ({uncertainty_pct:.1f}%) high disagreement; interpret with caution")
 
             # Build downloadable Markdown/PDF report after uncertainty_band is defined
             report_markdown = None
@@ -981,16 +1049,16 @@ The prediction uses cached training artifacts when available, falls back only wh
 
 You provided a 12-month climate sequence. Each row represents one calendar month (Jan–Dec) with 9 climate features:
 - **Temperatures**: T2M, T2M_MAX, T2M_MIN, TS (all in °C)
-- **Precipitation**: PRECTOTCORR (**mm/month** — monthly total, not daily average)
+- **Precipitation**: PRECTOTCORR (**mm/month** monthly total, not daily average)
 - **Humidity**: RH2M (%), QV2M (g/kg), T2MDEW (°C), T2MWET (°C)
 
 ---
 
 | Band | Threshold | Meaning |
 |---|---:|---|
-| 🟢 Low | < 10% | Ensemble models largely agree — high confidence |
-| 🟡 Medium | 10–25% | Moderate disagreement — use with some caution |
-| 🔴 High | ≥ 25% | High disagreement — interpret carefully |
+| 🟢 Low | < 10% | Ensemble models largely agree high confidence |
+| 🟡 Medium | 10–25% | Moderate disagreement use with some caution |
+| 🔴 High | ≥ 25% | High disagreement interpret carefully |
                 """
             )
 
