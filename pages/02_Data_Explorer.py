@@ -153,22 +153,22 @@ Explore the climate and yield datasets to understand distributions, relationship
         else:
             st.info("No yield observations were found in the loaded results.")
 
-        crop_sensitivity = _get_crop_sensitivity_table(data)
-        if not crop_sensitivity.empty:
-            st.markdown("#### Crop Climate Sensitivity")
-            st.dataframe(crop_sensitivity, width='stretch', hide_index=True)
+#         crop_sensitivity = _get_crop_sensitivity_table(data)
+#         if not crop_sensitivity.empty:
+#             st.markdown("#### Crop Climate Sensitivity")
+#             st.dataframe(crop_sensitivity, width='stretch', hide_index=True)
 
-            fig = px.bar(
-                crop_sensitivity,
-                x='Crop',
-                y='Overall_Sensitivity',
-                title="Crop Climate Sensitivity",
-                color='Overall_Sensitivity',
-                color_continuous_scale="Reds",
-            )
-            st.plotly_chart(fig, width='stretch')
-        else:
-            st.info("No crop sensitivity data could be resolved from the loaded results.")
+#             fig = px.bar(
+#                 crop_sensitivity,
+#                 x='Crop',
+#                 y='Overall_Sensitivity',
+#                 title="Crop Climate Sensitivity",
+#                 color='Overall_Sensitivity',
+#                 color_continuous_scale="Reds",
+#             )
+#             st.plotly_chart(fig, width='stretch')
+#         else:
+#             st.info("No crop sensitivity data could be resolved from the loaded results.")
     
     with tab4:
         st.subheader("🔗 Climate-Yield Relationships")
