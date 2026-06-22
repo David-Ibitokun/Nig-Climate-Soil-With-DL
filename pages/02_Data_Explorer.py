@@ -179,7 +179,6 @@ The TCN-MLP model learns complex relationships between climate sequences and cro
 - **Temporal Patterns**: How climate conditions during different growing periods affect final yield
 - **Nonlinear Effects**: Interactions between multiple climate variables
 - **Crop-Specific**: Each crop responds differently to the same climate variations
-- **Regional Variations**: Soil and local practices create region-specific responses
         """)
         
         st.info("Use the **Model Architecture** page to understand how these relationships are captured.")
