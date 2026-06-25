@@ -645,7 +645,7 @@ Note: this is about model agreement, not a guarantee the prediction is correct. 
             st.plotly_chart(fig, width="stretch")
             
             # Compact summary
-            st.subheader("🤖 Ensemble Members Breakdown")
+            st.subheader("Ensemble Members Breakdown")
 
             # Show summary metrics
             col1, col2 = st.columns(2)

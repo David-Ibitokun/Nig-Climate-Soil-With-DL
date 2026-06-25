@@ -60,34 +60,6 @@ def apply_global_style() -> None:
         initial_sidebar_state="expanded",
     )
 
-    st.markdown(
-        """
-        <style>
-          .block-container { padding-top: 1.5rem; padding-bottom: 3rem; }
-          .stMetric { border: 1px solid rgba(0,0,0,0.06);
-                     padding: 0.75rem 0.9rem; border-radius: 0.75rem; }
-                    [data-testid="stSidebar"] { background: #0f1116; }
-                    [data-testid="stSidebar"] > div { background: #0f1116; }
-                    @media (max-width: 640px) {
-                        [data-testid="stHeader"],
-                        [data-testid="stToolbar"] {
-                            background-color: #0f1116 !important;
-                            background: #0f1116 !important;
-                        }
-                        [data-testid="stSidebar"] {
-                            background-color: #0f1116 !important;
-                            background: #0f1116 !important;
-                        }
-                        [data-testid="stSidebar"] > div {
-                            background-color: #0f1116 !important;
-                            background: #0f1116 !important;
-                        }
-                    }
-        </style>
-        """,
-        unsafe_allow_html=True,
-    )
-
 
 def _read_csv(path: Path) -> pd.DataFrame:
     if not path.exists():
